@@ -35,10 +35,9 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
         "overwrites": True,
         # web client + cookies: bypasses "Sign in to confirm you're not a bot".
         # Requires yt-dlp[default] (installs yt-dlp-ejs) + Node.js 20 for JS challenge solving.
-        # ios as fallback for videos where web client fails (ios skips cookies but avoids JS challenges).
+        # yt-dlp auto-detects Node.js as the EJS runtime when it's installed.
+        # ios as fallback for videos where web client fails.
         "extractor_args": {"youtube": {"player_client": ["web", "ios"]}},
-        # Use Node.js 20 as the JS runtime for EJS challenge solver scripts
-        "js_runtimes": ["node"],
     }
 
     if has_cookies:
