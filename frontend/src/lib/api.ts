@@ -57,6 +57,8 @@ export interface Clip {
   transcript_excerpt: string | null;
   file_ready: boolean;
   s3_key: string | null;
+  youtube_video_id: string | null;
+  youtube_url: string | null;
 }
 
 export interface Job {

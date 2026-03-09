@@ -6,6 +6,7 @@ interface Props {
   clip: Clip;
   jobId: string;
   videoTitle?: string | null;
+  onPublished?: (clipIndex: number, url: string) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -24,7 +25,7 @@ interface PublishModalProps {
   clip: Clip;
   jobId: string;
   videoTitle: string | null;
-  onClose: () => void;
+  onClose: (publishedUrl?: string) => void;
 }
 
 function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
@@ -91,7 +92,7 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
             </svg>
             <span className="text-white font-semibold">Publish to YouTube</span>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-xl leading-none">&times;</button>
+          <button onClick={() => onClose(result?.url)} className="text-gray-500 hover:text-gray-300 text-xl leading-none">&times;</button>
         </div>
 
         {result ? (
@@ -108,7 +109,7 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
               {result.url}
             </a>
             <button
-              onClick={onClose}
+              onClick={() => onClose(result.url)}
               className="mt-5 block w-full py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg"
             >
               Close
@@ -226,11 +227,12 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
 
 // ── Main ClipCard ─────────────────────────────────────────────────────────────
 
-export default function ClipCard({ clip, jobId, videoTitle }: Props) {
+export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const [showPublish, setShowPublish] = useState(false);
   const [ytStatus, setYtStatus] = useState<YouTubeStatus | null>(null);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(clip.youtube_url ?? null);
   // Video player state
   const [playerUrl, setPlayerUrl] = useState<string | null>(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
@@ -293,7 +295,13 @@ export default function ClipCard({ clip, jobId, videoTitle }: Props) {
           clip={clip}
           jobId={jobId}
           videoTitle={videoTitle ?? null}
-          onClose={() => setShowPublish(false)}
+          onClose={(url) => {
+            setShowPublish(false);
+            if (url) {
+              setPublishedUrl(url);
+              onPublished?.(clip.clip_index, url);
+            }
+          }}
         />
       )}
 
@@ -359,6 +367,21 @@ export default function ClipCard({ clip, jobId, videoTitle }: Props) {
           <p className="text-xs text-red-400">{downloadError}</p>
         )}
 
+        {/* Published badge */}
+        {publishedUrl && (
+          <a
+            href={publishedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-950/50 border border-red-900 rounded-lg px-3 py-1.5 w-fit"
+          >
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="currentColor">
+              <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.8.5 9.4.5 9.4.5s7.6 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/>
+            </svg>
+            Published on YouTube ↗
+          </a>
+        )}
+
         {/* Action buttons */}
         {clip.file_ready ? (
           <div className="mt-auto flex gap-2">
@@ -389,13 +412,13 @@ export default function ClipCard({ clip, jobId, videoTitle }: Props) {
             {ytStatus?.connected && (
               <button
                 onClick={() => setShowPublish(true)}
-                title="Publish to YouTube"
+                title={publishedUrl ? "Republish to YouTube" : "Publish to YouTube"}
                 className="inline-flex items-center justify-center gap-1.5 bg-red-700 hover:bg-red-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
               >
                 <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
                   <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.8.5 9.4.5 9.4.5s7.6 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/>
                 </svg>
-                Publish
+                {publishedUrl ? "Republish" : "Publish"}
               </button>
             )}
           </div>

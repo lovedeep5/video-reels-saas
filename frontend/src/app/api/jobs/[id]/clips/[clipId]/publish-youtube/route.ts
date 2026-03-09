@@ -70,9 +70,19 @@ export async function POST(
       tags,
     });
 
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+    // Persist published info to clip metadata so the UI can show the link
+    const updateKey = `output_clip_metadata.${clipIndex}.youtube_video_id`;
+    const updateUrl = `output_clip_metadata.${clipIndex}.youtube_url`;
+    await jobs.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { [updateKey]: videoId, [updateUrl]: youtubeUrl } }
+    );
+
     return NextResponse.json({
       youtube_video_id: videoId,
-      youtube_url: `https://www.youtube.com/watch?v=${videoId}`,
+      youtube_url: youtubeUrl,
     });
   } catch (e: unknown) {
     console.error("[publish-youtube] error:", e);
