@@ -26,10 +26,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         status: "queued",
         progress: 0,
         progress_message: "Queued for retry",
-        error_message: null,
-        completed_at: null,
-        ec2_instance_id: null,
-        started_at: null,
+      },
+      $unset: {
+        error_message: "",
+        completed_at: "",
+        ec2_instance_id: "",
+        started_at: "",
       },
       $inc: { retry_count: 1 },
     }
