@@ -214,7 +214,7 @@ pip install --quiet "yt-dlp[default]" pymongo boto3
 echo "[worker] python deps installed (yt-dlp[default] + yt-dlp-ejs)"
 
 # ── 7. User cookies fetched at runtime in run_job.py ─────────────────────────
-# Per-user cookies are downloaded from s3://bucket/users/{user_id}/youtube_cookies.txt
+# Per-user cookies are downloaded from s3://bucket/users/{{user_id}}/youtube_cookies.txt
 # inside run_job.py (after the job doc is loaded, so user_id is known).
 echo "[worker] user cookies will be fetched per-job by run_job.py"
 
