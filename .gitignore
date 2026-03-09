@@ -1,0 +1,65 @@
+# ── Secrets & environment ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# ── Storage (user uploads, processed videos, temp files) ─────────────────────
+storage/uploads/
+storage/output/
+storage/temp/
+storage/*.db
+storage/*.db-shm
+storage/*.db-wal
+
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE / local tools ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+.claude/
+
+# ── Debug / local scripts ──────────────────────────────────────────────────────
+terraform-debug.log
+*.ps1
+add_vercel_env.sh
+
+# ── Terraform ─────────────────────────────────────────────────────────────────
+terraform/terraform.tfvars
+terraform/.terraform/
+# .terraform.lock.hcl is committed — ensures CI uses same provider versions
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+
+# ── Lambda build artifacts ─────────────────────────────────────────────────────
+lambdas/*/build/
+lambdas/**/*.zip

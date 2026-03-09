@@ -1,0 +1,6 @@
+# EC2 worker dependencies
+# Install: pip install -r processing/requirements.txt
+# (also installs backend/requirements.txt for pipeline modules)
+
+pymongo==4.7.3
+boto3>=1.35.0

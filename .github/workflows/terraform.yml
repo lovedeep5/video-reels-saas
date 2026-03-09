@@ -1,0 +1,119 @@
+name: Terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - "lambdas/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - "lambdas/**"
+
+permissions:
+  contents: read
+  pull-requests: write  # allow posting plan output as PR comment
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ap-south-1
+
+  # All terraform variables injected via TF_VAR_* — no tfvars file needed
+  TF_VAR_aws_region: ap-south-1
+  TF_VAR_environment: prod
+  TF_VAR_s3_bucket: vidtoreel-bucket
+  TF_VAR_worker_ami_id: ""
+  TF_VAR_worker_instance_type: t3.small
+  TF_VAR_worker_subnet_id: subnet-043745df464232d4e
+  TF_VAR_max_concurrent_jobs: "10"
+  TF_VAR_stale_job_minutes: "35"
+  TF_VAR_max_job_retries: "3"
+  TF_VAR_mongodb_db_name: vidtoreels
+  TF_VAR_repo_url: https://github.com/lovedeep5/video-reels-saas.git
+
+  # Secrets — stored in GitHub repo Settings → Secrets and variables → Actions
+  TF_VAR_mongodb_uri: ${{ secrets.MONGODB_URI }}
+  TF_VAR_clerk_secret_key: ${{ secrets.CLERK_SECRET_KEY }}
+  TF_VAR_clerk_jwks_url: ${{ secrets.CLERK_JWKS_URL }}
+  TF_VAR_clerk_authorized_parties: ${{ secrets.CLERK_AUTHORIZED_PARTIES }}
+  TF_VAR_app_secret_key: ${{ secrets.APP_SECRET_KEY }}
+  TF_VAR_openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
+  TF_VAR_razorpay_key_id: ${{ secrets.RAZORPAY_KEY_ID }}
+  TF_VAR_razorpay_key_secret: ${{ secrets.RAZORPAY_KEY_SECRET }}
+  TF_VAR_razorpay_webhook_secret: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event_name == 'pull_request' && 'Plan' || 'Apply' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python (for Lambda builds)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build Lambda — dispatcher
+        run: |
+          mkdir -p lambdas/dispatcher/build
+          pip install -q -r lambdas/dispatcher/requirements.txt \
+            --platform manylinux2014_x86_64 --only-binary=:all: \
+            -t lambdas/dispatcher/build/
+          cp lambdas/dispatcher/handler.py lambdas/dispatcher/build/
+
+      - name: Build Lambda — recovery
+        run: |
+          mkdir -p lambdas/recovery/build
+          pip install -q -r lambdas/recovery/requirements.txt \
+            --platform manylinux2014_x86_64 --only-binary=:all: \
+            -t lambdas/recovery/build/
+          cp lambdas/recovery/handler.py lambdas/recovery/build/
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: terraform
+        run: |
+          terraform plan -no-color -out=tfplan 2>&1 | tee plan.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      # Post plan as PR comment so you can review before merging
+      - name: Post Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('terraform/plan.txt', 'utf8');
+            const truncated = plan.length > 60000 ? plan.slice(0, 60000) + '\n... (truncated)' : plan;
+            const body = `## Terraform Plan\n\`\`\`\n${truncated}\n\`\`\``;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
+      # Only apply on push to main (not on PRs)
+      - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: terraform
+        run: terraform apply -auto-approve tfplan
