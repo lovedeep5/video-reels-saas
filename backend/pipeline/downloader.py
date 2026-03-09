@@ -18,21 +18,11 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
 
     out_template = str(output_dir / f"source_{job_id}.%(ext)s")
 
-    # Check what bypasses are available
+    # Check if cookies are available (downloaded from S3 by EC2 UserData)
     cookie_file = "/tmp/youtube_cookies.txt"
     has_cookies = os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100
 
-    # Check if bgutil po_token server is running on :4416
-    has_bgutil = False
-    try:
-        import socket
-        s = socket.create_connection(("localhost", 4416), timeout=2)
-        s.close()
-        has_bgutil = True
-    except Exception:
-        pass
-
-    print(f"[downloader] job_id={job_id} cookies={has_cookies} bgutil={has_bgutil} url={url}")
+    print(f"[downloader] job_id={job_id} cookies={has_cookies} url={url}")
 
     ydl_opts = {
         # Permissive format: try mp4+m4a, fall back to any best
@@ -43,9 +33,12 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
         "no_warnings": False,
         "noplaylist": True,
         "overwrites": True,
-        # web client first: bgutil plugin injects po_token automatically when server is up.
-        # ios/tv_embedded as fallback if bgutil not available.
-        "extractor_args": {"youtube": {"player_client": ["web", "ios", "tv_embedded"]}},
+        # web client + cookies: bypasses "Sign in to confirm you're not a bot".
+        # Requires yt-dlp[default] (installs yt-dlp-ejs) + Node.js 20 for JS challenge solving.
+        # ios as fallback for videos where web client fails (ios skips cookies but avoids JS challenges).
+        "extractor_args": {"youtube": {"player_client": ["web", "ios"]}},
+        # Use Node.js 20 as the JS runtime for EJS challenge solver scripts
+        "js_runtimes": ["node"],
     }
 
     if has_cookies:

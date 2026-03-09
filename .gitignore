@@ -52,6 +52,7 @@ Thumbs.db
 terraform-debug.log
 *.ps1
 add_vercel_env.sh
+cookies.txt
 
 # ── Terraform ─────────────────────────────────────────────────────────────────
 terraform/terraform.tfvars

@@ -153,11 +153,18 @@ set -euo pipefail
 # ── 1. System dependencies ────────────────────────────────────────────────────
 export CURRENT_STEP="install-system-deps"
 echo "[worker] step: $CURRENT_STEP"
-command -v ffmpeg >/dev/null || {{
-    apt-get update -qq
-    apt-get install -y -qq git python3-pip python3-venv ffmpeg curl unzip
-}}
+apt-get update -qq
+apt-get install -y -qq git python3-pip python3-venv ffmpeg curl unzip
 echo "[worker] ffmpeg: $(ffmpeg -version 2>&1 | head -1)"
+
+# ── 1b. Node.js 20 (required by yt-dlp[default] EJS challenge solver) ─────────
+export CURRENT_STEP="install-nodejs"
+echo "[worker] step: $CURRENT_STEP"
+if ! node --version 2>/dev/null | grep -q 'v2[0-9]'; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>&1 | tail -3
+    apt-get install -y -qq nodejs
+fi
+echo "[worker] node: $(node --version)"
 
 # ── 2. AWS CLI ────────────────────────────────────────────────────────────────
 export CURRENT_STEP="install-aws-cli"
@@ -201,62 +208,27 @@ echo "[worker] step: $CURRENT_STEP"
 source "$REPO/.venv/bin/activate"
 pip install --quiet --upgrade pip
 pip install --quiet -r "$REPO/backend/requirements.txt"
-pip install --quiet pymongo boto3
-echo "[worker] python deps installed"
+# yt-dlp[default] includes yt-dlp-ejs — the JS challenge solver scripts
+# required alongside Node.js 20 for YouTube signature/n-challenge solving
+pip install --quiet "yt-dlp[default]" pymongo boto3
+echo "[worker] python deps installed (yt-dlp[default] + yt-dlp-ejs)"
 
-# ── 7. YouTube cookies from SSM (primary bypass for bot detection) ────────────
+# ── 7. YouTube cookies from S3 ────────────────────────────────────────────────
+# Cookies bypass YouTube's "Sign in to confirm you're not a bot" check.
+# Combined with yt-dlp[default] (EJS solver) + Node.js 20, this is the
+# complete solution for downloading from AWS IPs.
+# Stored in S3 (not SSM) because the Netscape cookie file exceeds SSM's 32KB limit.
 export CURRENT_STEP="fetch-youtube-cookies"
 echo "[worker] step: $CURRENT_STEP"
-YT_COOKIES=$(get_ssm YOUTUBE_COOKIES 2>/dev/null || echo "")
-if [ -n "$YT_COOKIES" ] && [ "$YT_COOKIES" != "placeholder" ]; then
-    echo "$YT_COOKIES" > /tmp/youtube_cookies.txt
-    echo "[worker] YouTube cookies loaded ($(wc -l < /tmp/youtube_cookies.txt) lines)"
+aws s3 cp "s3://$S3_BUCKET/config/youtube_cookies.txt" /tmp/youtube_cookies.txt 2>&1 || true
+if [ -f /tmp/youtube_cookies.txt ] && [ $(wc -c < /tmp/youtube_cookies.txt) -gt 100 ]; then
+    echo "[worker] YouTube cookies loaded from S3 ($(wc -l < /tmp/youtube_cookies.txt) lines)"
 else
-    echo "[worker] No YouTube cookies in SSM yet"
+    echo "[worker] WARNING: No YouTube cookies in S3 — downloads will likely fail"
+    echo "[worker] Upload cookies to s3://$S3_BUCKET/config/youtube_cookies.txt"
 fi
 
-# ── 8. bgutil PO token server via Docker (primary bot-detection bypass) ───────
-export CURRENT_STEP="start-bgutil"
-echo "[worker] step: $CURRENT_STEP"
-
-# Install Docker via apt (reliable on Ubuntu 22.04)
-if ! command -v docker >/dev/null 2>&1; then
-    echo "[worker] installing docker.io..."
-    apt-get install -y -qq docker.io
-fi
-systemctl start docker 2>&1 || true
-
-# Remove any stale container then pull + run
-docker rm -f bgutil-server 2>/dev/null || true
-echo "[worker] pulling bgutil image..."
-docker pull brainicism/bgutil-ytdlp-pot-provider:latest 2>&1 | tail -3 || true
-echo "[worker] starting bgutil container..."
-# --shm-size=1g is required — headless Chrome crashes without shared memory
-docker run -d --name bgutil-server -p 4416:4416 --shm-size=1g \
-    brainicism/bgutil-ytdlp-pot-provider 2>&1 || true
-
-# Wait up to 90s for port 4416 to be open (Chrome takes ~30-60s to start)
-echo "[worker] waiting for bgutil server on :4416 (up to 90s)..."
-BGUTIL_READY=0
-for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18; do
-    if ss -tlnp 2>/dev/null | grep -q ':4416'; then
-        echo "[worker] bgutil ready after $((i * 5))s"
-        BGUTIL_READY=1
-        break
-    fi
-    sleep 5
-done
-if [ $BGUTIL_READY -eq 0 ]; then
-    echo "[worker] bgutil did not start — checking container logs:"
-    docker logs bgutil-server 2>&1 | tail -20 || true
-    echo "[worker] continuing without bgutil (will use cookies only)"
-fi
-
-# Install Python plugin in venv (same env as yt-dlp)
-pip install --quiet bgutil-ytdlp-pot-provider 2>&1 | tail -3 || true
-echo "[worker] bgutil setup done (ready=$BGUTIL_READY)"
-
-# ── 9. Run the job (pipeline: download → transcribe → LLM → render → upload) ──
+# ── 8. Run the job (pipeline: download → transcribe → LLM → render → upload) ──
 export CURRENT_STEP="run-pipeline"
 echo "[worker] step: $CURRENT_STEP"
 cd "$REPO"
