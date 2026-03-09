@@ -155,7 +155,7 @@ STRICT BOUNDARY RULES — FOLLOW EXACTLY:
 3. The clip must feel COMPLETE — it should not feel like it was cut from the middle of a larger point with no resolution.
 4. NO overlapping clips — each clip must cover a unique portion of the video.
 5. Clip duration must be between {int(clip_duration)} and {int(clip_duration + 15)} seconds. Do not go shorter (too rushed) or longer (loses attention).
-6. Do not select the very beginning of the video (first 30 seconds) unless it has an exceptional standalone hook — intros are usually weak clips.
+6. Prefer not to start a clip in the first 30 seconds — intros are usually weak. However, if the video opens with a strong hook or a complete standalone moment (or if you need to fill all {n_clips} requested clips), the first 30 seconds is allowed.
 7. Spread clips across different parts of the video when possible — avoid clustering all clips in one section.
 8. If a segment is weak on its own (e.g., just "yeah, exactly, mmhm"), expand to the nearest complete thought that gives it context.
 
