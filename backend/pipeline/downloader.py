@@ -19,7 +19,7 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
     out_template = str(output_dir / f"source_{job_id}.%(ext)s")
 
     ydl_opts = {
-        "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best[height<=1080]",
+        "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best",
         "outtmpl": out_template,
         "merge_output_format": "mp4",
         "quiet": True,
