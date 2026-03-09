@@ -19,6 +19,7 @@ export default function Navbar() {
     { href: "/dashboard/upload", label: "New Video" },
     { href: "/dashboard/keys", label: "API Keys" },
     { href: "/billing", label: "Billing" },
+    { href: "/dashboard/settings", label: "Settings" },
   ];
 
   return (

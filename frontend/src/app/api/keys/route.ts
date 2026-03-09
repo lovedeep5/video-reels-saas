@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const keys = await apiKeysCol();
-  const list = await keys.find({ user_id: user._id }).sort({ created_at: -1 }).toArray();
+  const list = await keys.find({ user_id: user._id, is_active: true }).sort({ created_at: -1 }).toArray();
   return NextResponse.json(list.map((k) => serializeKey(k)));
 }
 

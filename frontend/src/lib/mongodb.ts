@@ -45,6 +45,13 @@ export interface DbUser {
   subscription_expires_at?: Date;
   is_active: boolean;
   created_at: Date;
+  // YouTube OAuth (optional — only set when user connects their channel)
+  youtube_refresh_token?: string;
+  youtube_channel?: {
+    channel_id: string;
+    channel_title: string;
+    connected_at: Date;
+  };
 }
 
 export interface DbJob {

@@ -15,7 +15,7 @@ import re
 from typing import Optional
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "google/gemini-2.0-flash-exp:free"
+DEFAULT_MODEL = "openrouter/free"
 
 
 def _fmt_time(seconds: float) -> str:
@@ -99,9 +99,13 @@ def select_clips_with_llm(
     Returns list of {start, end, score, transcript} or empty list on any failure.
     """
     import requests
-    from config import settings
+    import os
 
-    if not settings.OPENROUTER_API_KEY:
+    # Read directly from env — avoids pydantic_settings caching issues on EC2
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    print(f"[llm_scorer] API key present: {bool(api_key)} length: {len(api_key)}")
+
+    if not api_key:
         print("[llm_scorer] No OPENROUTER_API_KEY — skipping LLM scoring")
         return []
 
@@ -150,7 +154,7 @@ Respond ONLY with a valid JSON array, no markdown, no explanation:
         response = requests.post(
             OPENROUTER_URL,
             headers={
-                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://vidtoreels.com",
                 "X-Title": "VidToReels",

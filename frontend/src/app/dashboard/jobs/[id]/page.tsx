@@ -8,6 +8,19 @@ import ClipCard from "@/components/ClipCard";
 
 const TERMINAL = ["completed", "failed"];
 
+function isBotDetectionError(msg: string | null): boolean {
+  if (!msg) return false;
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("sign in") ||
+    lower.includes("bot") ||
+    lower.includes("confirm you") ||
+    lower.includes("cookies") ||
+    lower.includes("private video") ||
+    lower.includes("age-restricted")
+  );
+}
+
 export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -135,9 +148,38 @@ export default function JobDetailPage() {
 
       {/* Failed state */}
       {job.status === "failed" && (
-        <div className="mb-8 bg-red-950 border border-red-800 rounded-xl p-5">
-          <p className="text-red-300 font-medium mb-1">Processing failed</p>
-          <p className="text-red-400 text-sm">{job.error_message}</p>
+        <div className="mb-8 space-y-3">
+          <div className="bg-red-950 border border-red-800 rounded-xl p-5">
+            <p className="text-red-300 font-medium mb-1">Processing failed</p>
+            <p className="text-red-400 text-sm">{job.error_message}</p>
+          </div>
+
+          {/* Bot detection help banner */}
+          {isBotDetectionError(job.error_message) && (
+            <div className="bg-yellow-950 border border-yellow-700 rounded-xl p-5">
+              <p className="text-yellow-300 font-semibold mb-1">YouTube blocked the download</p>
+              <p className="text-yellow-400 text-sm mb-3">
+                YouTube requires a signed-in session to download this video from our servers.
+                Install our Chrome extension to sync your YouTube cookies — then retry.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href="https://vidtoreels.com/extension"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 bg-yellow-700 hover:bg-yellow-600 text-white text-xs font-medium py-1.5 px-3 rounded-lg"
+                >
+                  Install Chrome Extension
+                </a>
+                <a
+                  href="/dashboard/settings"
+                  className="inline-flex items-center gap-1.5 border border-yellow-700 text-yellow-400 hover:text-yellow-300 text-xs font-medium py-1.5 px-3 rounded-lg"
+                >
+                  Already installed? Check Settings
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -152,7 +194,7 @@ export default function JobDetailPage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {job.clips.map((clip) => (
-              <ClipCard key={clip.id} clip={clip} jobId={job.id} />
+              <ClipCard key={clip.id} clip={clip} jobId={job.id} videoTitle={job.video_title} />
             ))}
           </div>
         </div>
@@ -164,7 +206,7 @@ export default function JobDetailPage() {
           <h2 className="text-lg font-semibold mb-4">Clips (partial)</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {job.clips.map((clip) => (
-              <ClipCard key={clip.id} clip={clip} jobId={job.id} />
+              <ClipCard key={clip.id} clip={clip} jobId={job.id} videoTitle={job.video_title} />
             ))}
           </div>
         </div>

@@ -3,13 +3,17 @@ import os
 from pathlib import Path
 
 
-def download_video(url: str, output_dir: Path, job_id: int) -> dict:
+def download_video(url: str, output_dir: Path, job_id: str, cookie_file: str | None = None) -> dict:
     """
     Download video from URL. Returns dict with:
       path: str — local file path
       title: str — video title
       duration: float — duration in seconds
     Raises RuntimeError on failure.
+
+    cookie_file: explicit path to a Netscape cookies file to use.
+      If None, falls back to /tmp/youtube_cookies.txt (admin cookies from S3).
+      If that's also missing, proceeds without cookies.
     """
     try:
         import yt_dlp
@@ -18,11 +22,19 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
 
     out_template = str(output_dir / f"source_{job_id}.%(ext)s")
 
-    # Check if cookies are available (downloaded from S3 by EC2 UserData)
-    cookie_file = "/tmp/youtube_cookies.txt"
-    has_cookies = os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100
+    # Cookie resolution: explicit → admin fallback → none
+    admin_cookie = "/tmp/youtube_cookies.txt"
+    if cookie_file and os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100:
+        resolved_cookie = cookie_file
+        cookie_source = "user"
+    elif os.path.exists(admin_cookie) and os.path.getsize(admin_cookie) > 100:
+        resolved_cookie = admin_cookie
+        cookie_source = "admin"
+    else:
+        resolved_cookie = None
+        cookie_source = "none"
 
-    print(f"[downloader] job_id={job_id} cookies={has_cookies} url={url}")
+    print(f"[downloader] job_id={job_id} cookies={cookie_source} url={url}")
 
     ydl_opts = {
         # Permissive format: try mp4+m4a, fall back to any best
@@ -41,8 +53,8 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
         "js_runtimes": {"node": {}},
     }
 
-    if has_cookies:
-        ydl_opts["cookiefile"] = cookie_file
+    if resolved_cookie:
+        ydl_opts["cookiefile"] = resolved_cookie
 
     print(f"[downloader] starting download...")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:

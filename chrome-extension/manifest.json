@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "VidToReels Cookie Sync",
+  "version": "1.0.0",
+  "description": "Sync your YouTube cookies to VidToReels so your videos can be processed without bot detection errors.",
+  "permissions": [
+    "cookies",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.youtube.com/*",
+    "https://*.google.com/*",
+    "https://vidtoreels.com/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  }
+}

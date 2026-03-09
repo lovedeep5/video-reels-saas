@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VidToReels Cookie Sync</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+    }
+
+    .header {
+      background: #1a1a2e;
+      border-bottom: 1px solid #2a2a4a;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-logo {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: bold; color: white;
+    }
+    .header-title { font-size: 14px; font-weight: 600; color: white; }
+    .header-sub { font-size: 11px; color: #888; margin-top: 1px; }
+
+    .body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    .status-box {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 12px;
+    }
+    .status-box.success { border-color: #166534; background: #052e16; }
+    .status-box.error   { border-color: #7f1d1d; background: #2d0a0a; }
+    .status-box.warning { border-color: #713f12; background: #1c0f00; }
+
+    .status-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot.green  { background: #22c55e; }
+    .dot.red    { background: #ef4444; }
+    .dot.yellow { background: #eab308; }
+    .dot.gray   { background: #6b7280; }
+
+    .status-label { font-weight: 500; }
+    .status-detail { color: #888; font-size: 11px; margin-top: 4px; padding-left: 16px; }
+
+    .btn {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary {
+      background: #4f46e5;
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) { background: #4338ca; }
+
+    .btn-sm {
+      padding: 7px 12px;
+      font-size: 12px;
+      border-radius: 6px;
+      background: #1f2937;
+      color: #9ca3af;
+      border: 1px solid #374151;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+    .btn-sm:hover { background: #374151; color: #e5e7eb; }
+
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .info-text {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #222;
+    }
+
+    .footer {
+      padding: 10px 16px;
+      border-top: 1px solid #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-text { font-size: 11px; color: #444; }
+    #not-logged-in { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-logo">V</div>
+    <div>
+      <div class="header-title">VidToReels</div>
+      <div class="header-sub">Cookie Sync</div>
+    </div>
+  </div>
+
+  <!-- Main content (logged in) -->
+  <div id="main" class="body">
+    <!-- Auth status -->
+    <div id="auth-status" class="status-box">
+      <div class="status-row">
+        <div class="dot gray" id="auth-dot"></div>
+        <span class="status-label" id="auth-label">Checking login...</span>
+      </div>
+      <div class="status-detail" id="auth-detail"></div>
+    </div>
+
+    <!-- YouTube cookie status -->
+    <div id="yt-status" class="status-box" style="display:none">
+      <div class="status-row">
+        <div class="dot gray" id="yt-dot"></div>
+        <span class="status-label" id="yt-label">Checking YouTube...</span>
+      </div>
+      <div class="status-detail" id="yt-detail"></div>
+    </div>
+
+    <!-- Sync result -->
+    <div id="sync-result" class="status-box" style="display:none">
+      <div class="status-row">
+        <div class="dot green" id="result-dot"></div>
+        <span class="status-label" id="result-label"></span>
+      </div>
+      <div class="status-detail" id="result-detail"></div>
+    </div>
+
+    <!-- Sync button -->
+    <button class="btn btn-primary" id="sync-btn" disabled>
+      <span id="sync-icon">🔄</span>
+      <span id="sync-text">Sync My YouTube Cookies</span>
+    </button>
+
+    <p class="info-text">
+      This reads your YouTube login cookies from Chrome and sends them securely to VidToReels.
+      Your cookies are stored privately — only used for your own video downloads.
+    </p>
+  </div>
+
+  <!-- Not logged in state -->
+  <div id="not-logged-in" class="body">
+    <div class="status-box error">
+      <div class="status-row">
+        <div class="dot red"></div>
+        <span class="status-label">Not logged in to VidToReels</span>
+      </div>
+      <div class="status-detail">You need to be logged in to sync cookies.</div>
+    </div>
+    <a href="https://vidtoreels.com/login" target="_blank" class="btn-sm" style="width:100%">
+      Open VidToReels to Login
+    </a>
+  </div>
+
+  <div class="footer">
+    <span class="footer-text">vidtoreels.com</span>
+    <a href="https://vidtoreels.com/dashboard" target="_blank" class="btn-sm">Dashboard</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

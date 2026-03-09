@@ -186,20 +186,15 @@ export default function ApiKeysPage() {
           {[
             {
               label: "Submit a YouTube URL",
-              code: `curl -X POST http://localhost:8000/api/videos/submit-url \\
-  -H "Authorization: Bearer vr_live_your_key_here" \\
-  -H "Content-Type: application/json" \\
-  -d '{"url": "https://youtube.com/watch?v=...", "clips_requested": 5}'`,
+              code: "curl -X POST https://vidtoreels.com/api/videos/submit-url \\\n  -H \"Authorization: Bearer vr_live_your_key_here\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"url\": \"https://youtube.com/watch?v=...\", \"clips_requested\": 5}'",
             },
             {
               label: "Check job status",
-              code: `curl http://localhost:8000/api/jobs/{job_id} \\
-  -H "Authorization: Bearer vr_live_your_key_here"`,
+              code: "curl https://vidtoreels.com/api/jobs/{job_id} \\\n  -H \"Authorization: Bearer vr_live_your_key_here\"",
             },
             {
-              label: "Download a clip",
-              code: `curl -OJ http://localhost:8000/api/jobs/{job_id}/clips/{clip_id}/download \\
-  -H "Authorization: Bearer vr_live_your_key_here"`,
+              label: "Download a clip (get presigned URL)",
+              code: "curl https://vidtoreels.com/api/jobs/{job_id}/clips/{clip_id}/download \\\n  -H \"Authorization: Bearer vr_live_your_key_here\"",
             },
           ].map(({ label, code }) => (
             <div key={label}>
@@ -210,10 +205,7 @@ export default function ApiKeysPage() {
         </div>
 
         <p className="text-xs text-gray-600 mt-4">
-          Full API reference at{" "}
-          <a href="http://localhost:8000/docs" target="_blank" className="text-indigo-400 hover:underline">
-            localhost:8000/docs
-          </a>
+          Base URL: <code className="text-indigo-300">https://vidtoreels.com/api</code>
         </p>
       </div>
     </div>

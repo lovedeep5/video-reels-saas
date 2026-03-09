@@ -171,3 +171,38 @@ export const keysApi = {
     api.post<ApiKeyCreated>("/keys", { name, expiry, custom_expires_at }),
   revoke: (id: string) => api.delete(`/keys/${id}`),
 };
+
+// ── YouTube ─────────────────────────────────────────────────────────────────
+
+export interface YouTubeStatus {
+  connected: boolean;
+  configured: boolean;
+  channel?: { channel_id: string; channel_title: string; connected_at: string } | null;
+}
+
+export interface YouTubeMetaSuggestion {
+  title: string;
+  description: string;
+  tags: string[];
+}
+
+export interface YouTubePublishResult {
+  youtube_video_id: string;
+  youtube_url: string;
+}
+
+export const youtubeApi = {
+  status: () => api.get<YouTubeStatus>("/youtube/status"),
+  disconnect: () => api.post("/youtube/disconnect"),
+  suggestMetadata: (data: {
+    transcript: string | null;
+    video_title: string | null;
+    clip_index: number;
+    duration: number;
+  }) => api.post<YouTubeMetaSuggestion>("/youtube/suggest-metadata", data),
+  publish: (
+    jobId: string,
+    clipId: number,
+    data: { title: string; description: string; tags: string[]; visibility: string }
+  ) => api.post<YouTubePublishResult>(`/jobs/${jobId}/clips/${clipId}/publish-youtube`, data),
+};

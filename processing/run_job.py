@@ -109,14 +109,36 @@ def run():
     os.environ["OPENROUTER_API_KEY"]    = OPENROUTER_API_KEY
 
     log(f"user={job.get('user_id')} plan={plan_key} clips_requested={job.get('clips_requested')} url={job.get('source_url','')[:80]}")
+
+    # Download user-specific cookies from S3 (if they exist)
+    user_cookie_path = _fetch_user_cookies(str(job["user_id"]))
+
     try:
-        _pipeline(job, plan)
+        _pipeline(job, plan, user_cookie_path)
     except Exception as e:
         fail_job(f"Unexpected error: {e}\n{traceback.format_exc()}")
         sys.exit(1)
 
 
-def _pipeline(job: dict, plan: dict):
+def _fetch_user_cookies(user_id: str) -> str | None:
+    """Download user-specific cookies from S3. Returns local path or None."""
+    import boto3
+    local_path = f"/tmp/youtube_cookies_user_{user_id}.txt"
+    try:
+        s3 = boto3.client("s3", region_name=AWS_REGION)
+        s3.download_file(S3_BUCKET, f"users/{user_id}/youtube_cookies.txt", local_path)
+        size = os.path.getsize(local_path)
+        if size > 100:
+            log(f"[cookies] User cookies loaded ({size} bytes) for user {user_id}")
+            return local_path
+        log(f"[cookies] User cookie file too small ({size} bytes), ignoring")
+        return None
+    except Exception as e:
+        log(f"[cookies] No user cookies in S3 for user {user_id}: {e}")
+        return None
+
+
+def _pipeline(job: dict, plan: dict, user_cookie_path: str | None = None):
     from pipeline.downloader import download_video, get_video_info
     from pipeline.llm_scorer import select_clips_with_llm
     from pipeline.processor import check_ffmpeg, render_clip
@@ -132,7 +154,7 @@ def _pipeline(job: dict, plan: dict):
     # ── 1. Download video ─────────────────────────────────────────────────────
     update_job(status="downloading", progress=5, progress_message="Downloading video...")
     try:
-        info = download_video(job["source_url"], TEMP_DIR, JOB_ID)
+        info = download_video(job["source_url"], TEMP_DIR, JOB_ID, cookie_file=user_cookie_path)
         source_path = info["path"]
         video_title    = info["title"]
         video_duration = info["duration"]
