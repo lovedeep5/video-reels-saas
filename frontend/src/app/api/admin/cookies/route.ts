@@ -1,0 +1,82 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth-helpers";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION || "ap-south-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+const S3_KEY = "config/youtube_cookies.txt";
+
+export async function POST(req: NextRequest) {
+  const user = await getCurrentUser(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });
+  }
+
+  const file = formData.get("cookies") as File | null;
+  if (!file) return NextResponse.json({ error: "No file provided (field name: cookies)" }, { status: 400 });
+
+  // Only accept .txt files
+  if (!file.name.endsWith(".txt") && file.type !== "text/plain") {
+    return NextResponse.json({ error: "File must be a .txt file" }, { status: 400 });
+  }
+
+  // 5MB sanity limit
+  if (file.size > 5 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
+  }
+
+  const content = await file.text();
+
+  // Validate Netscape cookie format
+  if (!content.includes("# Netscape HTTP Cookie File")) {
+    return NextResponse.json({
+      error: "Invalid file format. Must be a Netscape HTTP Cookie File exported via the 'Get cookies.txt LOCALLY' browser extension.",
+    }, { status: 400 });
+  }
+
+  // Count cookie lines by domain
+  const cookieLines = content.split("\n").filter(l => l.trim() && !l.startsWith("#"));
+  const youtubeCookies = cookieLines.filter(l => l.includes("youtube.com"));
+  const googleCookies  = cookieLines.filter(l => l.includes("google.com"));
+
+  if (youtubeCookies.length === 0) {
+    return NextResponse.json({
+      error: "No YouTube cookies found. Export cookies while logged in to youtube.com.",
+    }, { status: 400 });
+  }
+
+  // Upload to S3
+  try {
+    await s3.send(new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET!,
+      Key: S3_KEY,
+      Body: content,
+      ContentType: "text/plain",
+    }));
+  } catch (err) {
+    console.error("[admin/cookies] S3 upload failed:", err);
+    return NextResponse.json({ error: "S3 upload failed" }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    message: "YouTube cookies updated successfully",
+    stats: {
+      total_cookie_lines: cookieLines.length,
+      youtube_cookies: youtubeCookies.length,
+      google_cookies: googleCookies.length,
+      file_size_kb: Math.round(file.size / 1024),
+      s3_key: `s3://${process.env.S3_BUCKET}/${S3_KEY}`,
+    },
+  });
+}
