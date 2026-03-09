@@ -84,20 +84,29 @@ export default function CookiesAdminPage() {
       </Head>
 
       <div className="max-w-xl mx-auto">
-        <h1 className="text-xl font-bold mb-1">YouTube Cookies</h1>
+        <h1 className="text-xl font-bold mb-1">Sync YouTube Cookies</h1>
         <p className="text-sm text-gray-500 mb-6">
-          Upload fresh YouTube cookies to keep video downloads working.
-          Cookies expire every 2–4 weeks.
+          Manually upload your YouTube cookies file. These are stored privately for your account only
+          and used to download videos without bot-detection errors.
         </p>
 
-        {/* Instructions */}
+        {/* Recommended: extension */}
+        <div className="bg-indigo-950 border border-indigo-800 rounded-xl p-4 mb-4 text-sm">
+          <p className="text-indigo-300 font-medium mb-1">Recommended: use our Chrome extension</p>
+          <p className="text-indigo-400 text-xs mb-2">One click syncs everything automatically — no file download needed.</p>
+          <a href="/dashboard/settings" className="text-xs text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg inline-block">
+            Go to Settings → Install Extension
+          </a>
+        </div>
+
+        {/* Manual fallback */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6 text-sm text-gray-400 space-y-2">
-          <p className="text-gray-300 font-medium">How to export cookies</p>
+          <p className="text-gray-300 font-medium">Or upload manually</p>
           <ol className="list-decimal ml-4 space-y-1">
-            <li>Install the <span className="text-white font-mono text-xs">"Get cookies.txt LOCALLY"</span> Chrome extension</li>
+            <li>Install <span className="text-white font-mono text-xs">"Get cookies.txt LOCALLY"</span> Chrome extension</li>
             <li>Log in to <span className="text-white">youtube.com</span></li>
-            <li>Click the extension → Export → <span className="text-white">Current Site</span></li>
-            <li>Upload the downloaded <span className="text-white font-mono text-xs">youtube.com_cookies.txt</span> below</li>
+            <li>Click the extension → Export → <span className="text-white">All Cookies</span> (Netscape format)</li>
+            <li>Upload the downloaded file below</li>
           </ol>
         </div>
 
@@ -164,8 +173,7 @@ export default function CookiesAdminPage() {
         </button>
 
         <p className="text-xs text-gray-600 mt-3 text-center">
-          Cookies are stored encrypted in S3 and only used by EC2 workers for downloading videos.
-          This page is hidden from search engines.
+          Cookies are stored privately in S3 under your account and only used to download your videos.
         </p>
       </div>
     </>

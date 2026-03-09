@@ -10,7 +10,7 @@ const s3 = new S3Client({
   },
 });
 
-const S3_KEY = "config/youtube_cookies.txt";
+// S3 key is per-user — resolved after auth
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser(req);
@@ -56,27 +56,29 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
+  const s3Key = `users/${user._id!.toHexString()}/youtube_cookies.txt`;
+
   // Upload to S3
   try {
     await s3.send(new PutObjectCommand({
       Bucket: process.env.S3_BUCKET!,
-      Key: S3_KEY,
+      Key: s3Key,
       Body: content,
       ContentType: "text/plain",
     }));
   } catch (err) {
-    console.error("[admin/cookies] S3 upload failed:", err);
+    console.error("[cookies] S3 upload failed:", err);
     return NextResponse.json({ error: "S3 upload failed" }, { status: 500 });
   }
 
   return NextResponse.json({
-    message: "YouTube cookies updated successfully",
+    message: "YouTube cookies synced successfully",
     stats: {
       total_cookie_lines: cookieLines.length,
       youtube_cookies: youtubeCookies.length,
       google_cookies: googleCookies.length,
       file_size_kb: Math.round(file.size / 1024),
-      s3_key: `s3://${process.env.S3_BUCKET}/${S3_KEY}`,
+      s3_key: `s3://${process.env.S3_BUCKET}/${s3Key}`,
     },
   });
 }

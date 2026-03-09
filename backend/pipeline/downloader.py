@@ -22,14 +22,10 @@ def download_video(url: str, output_dir: Path, job_id: str, cookie_file: str | N
 
     out_template = str(output_dir / f"source_{job_id}.%(ext)s")
 
-    # Cookie resolution: explicit → admin fallback → none
-    admin_cookie = "/tmp/youtube_cookies.txt"
+    # Cookie resolution: use provided user cookie file, or proceed without
     if cookie_file and os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100:
         resolved_cookie = cookie_file
         cookie_source = "user"
-    elif os.path.exists(admin_cookie) and os.path.getsize(admin_cookie) > 100:
-        resolved_cookie = admin_cookie
-        cookie_source = "admin"
     else:
         resolved_cookie = None
         cookie_source = "none"

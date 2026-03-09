@@ -1,7 +1,7 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { videoApi } from "@/lib/api";
+import { videoApi, cookiesApi } from "@/lib/api";
 
 const RATIO_PRESETS = [
   {
@@ -48,6 +48,107 @@ const RATIO_PRESETS = [
   },
 ] as const;
 
+// ── Cookie sync confirmation modal ───────────────────────────────────────────
+
+function CookieSyncModal({
+  synced,
+  lastModified,
+  onConfirm,
+  onCancel,
+}: {
+  synced: boolean;
+  lastModified: string | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const ago = lastModified
+    ? (() => {
+        const diff = Math.round((Date.now() - new Date(lastModified).getTime()) / 60000);
+        if (diff < 60) return `${diff} min ago`;
+        if (diff < 1440) return `${Math.round(diff / 60)}h ago`;
+        return `${Math.round(diff / 1440)}d ago`;
+      })()
+    : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md shadow-2xl p-6 flex flex-col gap-5">
+
+        {synced ? (
+          <>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-900 flex items-center justify-center text-green-400 text-xl flex-shrink-0">✓</div>
+              <div>
+                <p className="text-white font-semibold">Cookies synced</p>
+                {ago && <p className="text-xs text-gray-400">Last synced {ago}</p>}
+              </div>
+            </div>
+            <p className="text-sm text-gray-300">
+              Your YouTube cookies are ready. Click <strong>Process Video</strong> to continue.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={onCancel} className="flex-1 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm">
+                Cancel
+              </button>
+              <button onClick={onConfirm} className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold">
+                Process Video
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-900 flex items-center justify-center text-yellow-400 text-xl flex-shrink-0">!</div>
+              <div>
+                <p className="text-white font-semibold">Sync your YouTube cookies first</p>
+                <p className="text-xs text-gray-400">Required to download YouTube videos</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-300">
+              Our servers need your YouTube session to bypass bot detection.
+              Install the Chrome extension and click <strong>Sync My YouTube Cookies</strong> — takes 5 seconds.
+            </p>
+            <div className="bg-gray-800 rounded-xl p-4 space-y-2 text-sm">
+              <div className="flex items-center gap-2 text-gray-300">
+                <span className="text-indigo-400 font-bold">1.</span> Install the VidToReels Chrome extension
+              </div>
+              <div className="flex items-center gap-2 text-gray-300">
+                <span className="text-indigo-400 font-bold">2.</span> Make sure you&apos;re logged into YouTube
+              </div>
+              <div className="flex items-center gap-2 text-gray-300">
+                <span className="text-indigo-400 font-bold">3.</span> Click the extension → <strong>Sync My YouTube Cookies</strong>
+              </div>
+              <div className="flex items-center gap-2 text-gray-300">
+                <span className="text-indigo-400 font-bold">4.</span> Come back and submit your video
+              </div>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              <a
+                href="/dashboard/settings#cookies"
+                target="_blank"
+                className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold text-center"
+              >
+                Get the Extension
+              </a>
+              <button
+                onClick={onConfirm}
+                className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-400 hover:text-white text-sm"
+              >
+                Proceed anyway
+              </button>
+            </div>
+            <button onClick={onCancel} className="text-xs text-gray-600 hover:text-gray-400 text-center">
+              Cancel
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main uploader ─────────────────────────────────────────────────────────────
+
 export default function VideoUploader() {
   const router = useRouter();
   const [tab, setTab] = useState<"url" | "upload">("url");
@@ -60,6 +161,21 @@ export default function VideoUploader() {
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Cookie sync state
+  const [cookieSynced, setCookieSynced] = useState<boolean | null>(null);
+  const [cookieLastModified, setCookieLastModified] = useState<string | null>(null);
+  const [showCookieModal, setShowCookieModal] = useState(false);
+  const pendingSubmitRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    cookiesApi.status()
+      .then((r) => {
+        setCookieSynced(r.data.synced);
+        setCookieLastModified(r.data.last_modified ?? null);
+      })
+      .catch(() => setCookieSynced(false));
+  }, []);
+
   const selectedPreset = ratio === "custom" ? "custom" : ratio;
 
   function getEffectiveRatio() {
@@ -68,6 +184,27 @@ export default function VideoUploader() {
       return trimmed || "9:16";
     }
     return ratio;
+  }
+
+  const isYouTubeUrl = (u: string) =>
+    /youtube\.com|youtu\.be/i.test(u);
+
+  async function doSubmit() {
+    setLoading(true);
+    const effectiveRatio = getEffectiveRatio();
+    try {
+      let res;
+      if (tab === "url") {
+        res = await videoApi.submitUrl(url.trim(), clips, effectiveRatio);
+      } else {
+        res = await videoApi.upload(file!, clips, effectiveRatio);
+      }
+      router.push(`/dashboard/jobs/${res.data.job_id}`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(msg || "Submission failed");
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -79,28 +216,34 @@ export default function VideoUploader() {
       return;
     }
 
-    setLoading(true);
-    const effectiveRatio = getEffectiveRatio();
-
-    try {
-      let res;
-      if (tab === "url") {
-        if (!url.trim()) { setError("Please enter a URL"); setLoading(false); return; }
-        res = await videoApi.submitUrl(url.trim(), clips, effectiveRatio);
-      } else {
-        if (!file) { setError("Please select a file"); setLoading(false); return; }
-        res = await videoApi.upload(file, clips, effectiveRatio);
+    if (tab === "url") {
+      if (!url.trim()) { setError("Please enter a URL"); return; }
+      // Show cookie modal for YouTube URLs
+      if (isYouTubeUrl(url)) {
+        pendingSubmitRef.current = doSubmit;
+        setShowCookieModal(true);
+        return;
       }
-      router.push(`/dashboard/jobs/${res.data.job_id}`);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg || "Submission failed");
-    } finally {
-      setLoading(false);
+    } else {
+      if (!file) { setError("Please select a file"); return; }
     }
+
+    await doSubmit();
   }
 
   return (
+    <>
+    {showCookieModal && (
+      <CookieSyncModal
+        synced={cookieSynced ?? false}
+        lastModified={cookieLastModified}
+        onConfirm={() => {
+          setShowCookieModal(false);
+          pendingSubmitRef.current?.();
+        }}
+        onCancel={() => setShowCookieModal(false)}
+      />
+    )}
     <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-8 space-y-6 max-w-2xl">
       {/* Tabs */}
       <div className="flex border border-gray-700 rounded-lg overflow-hidden w-fit">
@@ -224,5 +367,6 @@ export default function VideoUploader() {
         {loading ? "Submitting..." : "Generate Reels"}
       </button>
     </form>
+    </>
   );
 }

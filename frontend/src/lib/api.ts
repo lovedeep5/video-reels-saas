@@ -191,6 +191,10 @@ export interface YouTubePublishResult {
   youtube_url: string;
 }
 
+export const cookiesApi = {
+  status: () => api.get<{ synced: boolean; last_modified?: string | null }>("/cookies/status"),
+};
+
 export const youtubeApi = {
   status: () => api.get<YouTubeStatus>("/youtube/status"),
   disconnect: () => api.post("/youtube/disconnect"),

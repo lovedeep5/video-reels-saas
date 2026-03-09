@@ -213,20 +213,10 @@ pip install --quiet -r "$REPO/backend/requirements.txt"
 pip install --quiet "yt-dlp[default]" pymongo boto3
 echo "[worker] python deps installed (yt-dlp[default] + yt-dlp-ejs)"
 
-# ── 7. YouTube cookies from S3 ────────────────────────────────────────────────
-# Cookies bypass YouTube's "Sign in to confirm you're not a bot" check.
-# Combined with yt-dlp[default] (EJS solver) + Node.js 20, this is the
-# complete solution for downloading from AWS IPs.
-# Stored in S3 (not SSM) because the Netscape cookie file exceeds SSM's 32KB limit.
-export CURRENT_STEP="fetch-youtube-cookies"
-echo "[worker] step: $CURRENT_STEP"
-aws s3 cp "s3://$S3_BUCKET/config/youtube_cookies.txt" /tmp/youtube_cookies.txt 2>&1 || true
-if [ -f /tmp/youtube_cookies.txt ] && [ $(wc -c < /tmp/youtube_cookies.txt) -gt 100 ]; then
-    echo "[worker] YouTube cookies loaded from S3 ($(wc -l < /tmp/youtube_cookies.txt) lines)"
-else
-    echo "[worker] WARNING: No YouTube cookies in S3 — downloads will likely fail"
-    echo "[worker] Upload cookies to s3://$S3_BUCKET/config/youtube_cookies.txt"
-fi
+# ── 7. User cookies fetched at runtime in run_job.py ─────────────────────────
+# Per-user cookies are downloaded from s3://bucket/users/{user_id}/youtube_cookies.txt
+# inside run_job.py (after the job doc is loaded, so user_id is known).
+echo "[worker] user cookies will be fetched per-job by run_job.py"
 
 # ── 8. Run the job (pipeline: download → transcribe → LLM → render → upload) ──
 export CURRENT_STEP="run-pipeline"
