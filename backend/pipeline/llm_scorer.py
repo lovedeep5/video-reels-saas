@@ -15,7 +15,7 @@ import re
 from typing import Optional
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "anthropic/claude-sonnet-4-5"
+DEFAULT_MODEL = "google/gemini-2.0-flash-exp:free"
 
 
 def _fmt_time(seconds: float) -> str:

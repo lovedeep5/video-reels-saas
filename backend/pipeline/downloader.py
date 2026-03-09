@@ -26,8 +26,8 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
         "no_warnings": True,
         "noplaylist": True,
         "overwrites": True,  # always re-download; prevents stale file reuse when job IDs are recycled
-        # Use iOS client to bypass YouTube bot-detection on headless servers
-        "extractor_args": {"youtube": {"player_client": ["ios"]}},
+        # Multiple client fallbacks to bypass YouTube bot-detection on headless servers
+        "extractor_args": {"youtube": {"player_client": ["ios", "tv_embedded", "android_creator"]}},
     }
 
     print(f"[downloader] job_id={job_id} downloading: {url}")
