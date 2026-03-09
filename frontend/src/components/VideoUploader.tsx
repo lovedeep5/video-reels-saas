@@ -181,6 +181,7 @@ export default function VideoUploader() {
 
   // Cookie sync state
   const [cookieSynced, setCookieSynced] = useState<boolean | null>(null);
+  const [cookieNeedsRefresh, setCookieNeedsRefresh] = useState(false);
   const [cookieLastModified, setCookieLastModified] = useState<string | null>(null);
   const [showCookieModal, setShowCookieModal] = useState(false);
   const pendingSubmitRef = useRef<(() => void) | null>(null);
@@ -189,6 +190,7 @@ export default function VideoUploader() {
     cookiesApi.status()
       .then((r) => {
         setCookieSynced(r.data.synced);
+        setCookieNeedsRefresh(r.data.needs_refresh ?? false);
         setCookieLastModified(r.data.last_modified ?? null);
       })
       .catch(() => setCookieSynced(false));
@@ -254,6 +256,7 @@ export default function VideoUploader() {
     {showCookieModal && (
       <CookieSyncModal
         synced={cookieSynced ?? false}
+        needsRefresh={cookieNeedsRefresh}
         lastModified={cookieLastModified}
         onConfirm={() => {
           setShowCookieModal(false);
