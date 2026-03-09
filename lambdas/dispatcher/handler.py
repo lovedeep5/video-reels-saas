@@ -215,22 +215,46 @@ else
     echo "[worker] No YouTube cookies in SSM yet"
 fi
 
-# ── 8. bgutil PO token server via Docker (supplementary bypass) ───────────────
+# ── 8. bgutil PO token server via Docker (primary bot-detection bypass) ───────
 export CURRENT_STEP="start-bgutil"
 echo "[worker] step: $CURRENT_STEP"
-_start_bgutil() {{
-    command -v docker >/dev/null || {{
-        curl -fsSL https://get.docker.com | sh >/dev/null 2>&1 || return 0
-    }}
-    docker pull brainicism/bgutil-ytdlp-pot-provider:latest >/dev/null 2>&1 || return 0
-    docker run -d --name bgutil-server -p 4416:4416 \
-        brainicism/bgutil-ytdlp-pot-provider >/dev/null 2>&1 || return 0
-    sleep 8
-    echo "[worker] bgutil server running on :4416"
-}}
-_start_bgutil || true
-pip install --quiet bgutil-ytdlp-pot-provider || true
-echo "[worker] bgutil setup done"
+
+# Install Docker via apt (reliable on Ubuntu 22.04)
+if ! command -v docker >/dev/null 2>&1; then
+    echo "[worker] installing docker.io..."
+    apt-get install -y -qq docker.io
+fi
+systemctl start docker 2>&1 || true
+
+# Remove any stale container then pull + run
+docker rm -f bgutil-server 2>/dev/null || true
+echo "[worker] pulling bgutil image..."
+docker pull brainicism/bgutil-ytdlp-pot-provider:latest 2>&1 | tail -3 || true
+echo "[worker] starting bgutil container..."
+# --shm-size=1g is required — headless Chrome crashes without shared memory
+docker run -d --name bgutil-server -p 4416:4416 --shm-size=1g \
+    brainicism/bgutil-ytdlp-pot-provider 2>&1 || true
+
+# Wait up to 90s for port 4416 to be open (Chrome takes ~30-60s to start)
+echo "[worker] waiting for bgutil server on :4416 (up to 90s)..."
+BGUTIL_READY=0
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18; do
+    if ss -tlnp 2>/dev/null | grep -q ':4416'; then
+        echo "[worker] bgutil ready after $((i * 5))s"
+        BGUTIL_READY=1
+        break
+    fi
+    sleep 5
+done
+if [ $BGUTIL_READY -eq 0 ]; then
+    echo "[worker] bgutil did not start — checking container logs:"
+    docker logs bgutil-server 2>&1 | tail -20 || true
+    echo "[worker] continuing without bgutil (will use cookies only)"
+fi
+
+# Install Python plugin in venv (same env as yt-dlp)
+pip install --quiet bgutil-ytdlp-pot-provider 2>&1 | tail -3 || true
+echo "[worker] bgutil setup done (ready=$BGUTIL_READY)"
 
 # ── 9. Run the job (pipeline: download → transcribe → LLM → render → upload) ──
 export CURRENT_STEP="run-pipeline"

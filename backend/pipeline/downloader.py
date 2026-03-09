@@ -18,26 +18,40 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
 
     out_template = str(output_dir / f"source_{job_id}.%(ext)s")
 
+    # Check what bypasses are available
+    cookie_file = "/tmp/youtube_cookies.txt"
+    has_cookies = os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100
+
+    # Check if bgutil po_token server is running on :4416
+    has_bgutil = False
+    try:
+        import socket
+        s = socket.create_connection(("localhost", 4416), timeout=2)
+        s.close()
+        has_bgutil = True
+    except Exception:
+        pass
+
+    print(f"[downloader] job_id={job_id} cookies={has_cookies} bgutil={has_bgutil} url={url}")
+
     ydl_opts = {
+        # Permissive format: try mp4+m4a, fall back to any best
         "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best",
         "outtmpl": out_template,
         "merge_output_format": "mp4",
-        "quiet": True,
-        "no_warnings": True,
+        "quiet": False,  # show output so EC2 logs capture download progress + errors
+        "no_warnings": False,
         "noplaylist": True,
         "overwrites": True,
-        # web client: bgutil plugin provides po_token when server is running.
-        # Falls back to ios/tv_embedded if bgutil is not available.
+        # web client first: bgutil plugin injects po_token automatically when server is up.
+        # ios/tv_embedded as fallback if bgutil not available.
         "extractor_args": {"youtube": {"player_client": ["web", "ios", "tv_embedded"]}},
     }
 
-    # Use cookies if available — most reliable bypass for YouTube bot detection on EC2
-    cookie_file = "/tmp/youtube_cookies.txt"
-    if os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100:
+    if has_cookies:
         ydl_opts["cookiefile"] = cookie_file
-        print(f"[downloader] using YouTube cookies from {cookie_file}")
 
-    print(f"[downloader] job_id={job_id} downloading: {url}")
+    print(f"[downloader] starting download...")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
 
