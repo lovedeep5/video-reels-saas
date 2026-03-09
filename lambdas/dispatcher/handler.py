@@ -211,18 +211,31 @@ echo "[worker] step: $CURRENT_STEP"
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
 apt-get install -y -qq nodejs
 echo "[worker] node: $(node --version)"
-# Clone bgutil server and start it (provides YouTube PO tokens to yt-dlp)
+# Clone bgutil repo
 git clone --depth=1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /tmp/bgutil 2>/dev/null || true
-if [ -d /tmp/bgutil/server ]; then
-    cd /tmp/bgutil/server && npm install --quiet >/dev/null 2>&1 && node index.js &
-    sleep 5 && cd -
-    echo "[worker] bgutil PO token server started on :4416"
-else
-    echo "[worker] bgutil server dir not found - falling back to player_client"
-fi
-# Install yt-dlp bgutil plugin into venv (auto-used when server is running)
-pip install --quiet bgutil-ytdlp-pot-provider
-echo "[worker] bgutil plugin installed"
+# Start bgutil server — never fails the job (non-fatal helper function)
+_start_bgutil() {{
+    local sdir=""
+    for d in "/tmp/bgutil/server" "/tmp/bgutil"; do
+        if [ -f "$d/package.json" ]; then sdir="$d"; break; fi
+    done
+    if [ -z "$sdir" ]; then echo "[worker] bgutil: no server dir"; return 0; fi
+    npm install --quiet --prefix "$sdir" >/dev/null 2>&1 || true
+    for entry in "server.js" "index.js" "app.js"; do
+        if [ -f "$sdir/$entry" ]; then
+            node "$sdir/$entry" &
+            sleep 5
+            echo "[worker] bgutil server started: $sdir/$entry"
+            return 0
+        fi
+    done
+    echo "[worker] bgutil: no entry point found"
+    return 0
+}}
+_start_bgutil || true
+# Install yt-dlp bgutil plugin into venv (auto-connects to server on :4416)
+pip install --quiet bgutil-ytdlp-pot-provider || true
+echo "[worker] bgutil setup done"
 
 # ── 9. Run the job ────────────────────────────────────────────────────────────
 export CURRENT_STEP="run-pipeline"
