@@ -179,22 +179,22 @@ export default function ApiKeysPage() {
       <div className="mt-10 bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="text-sm font-semibold text-gray-200 mb-4">Using the API</h2>
         <p className="text-xs text-gray-400 mb-4">
-          Pass your API key as a Bearer token in the <code className="text-indigo-300">Authorization</code> header.
+          Pass your API key in the <code className="text-indigo-300">X-API-Key</code> header.
         </p>
 
         <div className="space-y-4">
           {[
             {
               label: "Submit a YouTube URL",
-              code: "curl -X POST https://vidtoreels.com/api/videos/submit-url \\\n  -H \"Authorization: Bearer vr_live_your_key_here\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"url\": \"https://youtube.com/watch?v=...\", \"clips_requested\": 5}'",
+              code: "curl -X POST https://vidtoreels.com/api/videos/submit-url \\\n  -H \"X-API-Key: vr_live_your_key_here\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"url\": \"https://youtube.com/watch?v=...\", \"clips_requested\": 5}'",
             },
             {
               label: "Check job status",
-              code: "curl https://vidtoreels.com/api/jobs/{job_id} \\\n  -H \"Authorization: Bearer vr_live_your_key_here\"",
+              code: "curl https://vidtoreels.com/api/jobs/{job_id} \\\n  -H \"X-API-Key: vr_live_your_key_here\"",
             },
             {
               label: "Download a clip (get presigned URL)",
-              code: "curl https://vidtoreels.com/api/jobs/{job_id}/clips/{clip_id}/download \\\n  -H \"Authorization: Bearer vr_live_your_key_here\"",
+              code: "curl https://vidtoreels.com/api/jobs/{job_id}/clips/{clip_id}/download \\\n  -H \"X-API-Key: vr_live_your_key_here\"",
             },
           ].map(({ label, code }) => (
             <div key={label}>

@@ -13,15 +13,21 @@ function hashApiKey(key: string): string {
 // ── Resolve user from Clerk session or API key ────────────────────────────────
 
 export async function getCurrentUser(req?: NextRequest): Promise<DbUser | null> {
-  // Try API key first (from Authorization header)
-  const authHeader = req?.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-
-  if (token.startsWith(API_KEY_PREFIX)) {
-    return getUserByApiKey(token);
+  // 1. Check X-API-Key header (recommended for Postman / programmatic use)
+  const xApiKey = req?.headers.get("x-api-key") ?? "";
+  if (xApiKey.startsWith(API_KEY_PREFIX)) {
+    return getUserByApiKey(xApiKey);
   }
 
-  // Fall back to Clerk session
+  // 2. Check Authorization: Bearer header — but only if it looks like an API key,
+  //    because Clerk v5 throws on malformed JWTs before our code can intercept.
+  const authHeader = req?.headers.get("authorization") ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  if (bearerToken.startsWith(API_KEY_PREFIX)) {
+    return getUserByApiKey(bearerToken);
+  }
+
+  // 3. Fall back to Clerk session (browser requests with session cookie/JWT)
   return getUserFromClerkSession();
 }
 
@@ -42,9 +48,14 @@ async function getUserByApiKey(key: string): Promise<DbUser | null> {
 }
 
 async function getUserFromClerkSession(): Promise<DbUser | null> {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return null;
-  return getOrCreateUser(clerkId);
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return null;
+    return getOrCreateUser(clerkId);
+  } catch {
+    // Clerk throws on malformed tokens (e.g. API key accidentally parsed as JWT)
+    return null;
+  }
 }
 
 // ── Create user on first login ────────────────────────────────────────────────

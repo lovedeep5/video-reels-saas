@@ -192,7 +192,13 @@ export interface YouTubePublishResult {
 }
 
 export const cookiesApi = {
-  status: () => api.get<{ synced: boolean; last_modified?: string | null }>("/cookies/status"),
+  status: () =>
+    api.get<{
+      synced: boolean;
+      needs_refresh?: boolean;
+      last_modified?: string | null;
+      last_job_at?: string | null;
+    }>("/cookies/status"),
 };
 
 export const youtubeApi = {

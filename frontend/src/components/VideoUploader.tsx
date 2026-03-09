@@ -50,96 +50,114 @@ const RATIO_PRESETS = [
 
 // ── Cookie sync confirmation modal ───────────────────────────────────────────
 
+function timeAgo(iso: string) {
+  const diff = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diff < 60) return `${diff} min ago`;
+  if (diff < 1440) return `${Math.round(diff / 60)}h ago`;
+  return `${Math.round(diff / 1440)}d ago`;
+}
+
 function CookieSyncModal({
   synced,
+  needsRefresh,
   lastModified,
   onConfirm,
   onCancel,
 }: {
   synced: boolean;
+  needsRefresh: boolean;
   lastModified: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const ago = lastModified
-    ? (() => {
-        const diff = Math.round((Date.now() - new Date(lastModified).getTime()) / 60000);
-        if (diff < 60) return `${diff} min ago`;
-        if (diff < 1440) return `${Math.round(diff / 60)}h ago`;
-        return `${Math.round(diff / 1440)}d ago`;
-      })()
-    : null;
+  // "Ready" = synced and NOT used by a subsequent job
+  const isReady = synced && !needsRefresh;
+
+  const syncInstructions = (
+    <div className="bg-gray-800 rounded-xl p-4 space-y-2 text-sm">
+      {[
+        "Install the VidToReels Chrome extension",
+        "Make sure you're logged into YouTube",
+        <>Click the extension → <strong>Sync My YouTube Cookies</strong></>,
+        "Come back and submit your video",
+      ].map((step, i) => (
+        <div key={i} className="flex items-start gap-2 text-gray-300">
+          <span className="text-indigo-400 font-bold shrink-0">{i + 1}.</span>
+          <span>{step}</span>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md shadow-2xl p-6 flex flex-col gap-5">
 
-        {synced ? (
+        {isReady ? (
+          /* ── Cookies fresh and ready ── */
           <>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-green-900 flex items-center justify-center text-green-400 text-xl flex-shrink-0">✓</div>
               <div>
-                <p className="text-white font-semibold">Cookies synced</p>
-                {ago && <p className="text-xs text-gray-400">Last synced {ago}</p>}
+                <p className="text-white font-semibold">Cookies synced and ready</p>
+                {lastModified && <p className="text-xs text-gray-400">Synced {timeAgo(lastModified)}</p>}
+              </div>
+            </div>
+            <p className="text-sm text-gray-300">Your YouTube cookies are fresh. Click <strong>Process Video</strong> to continue.</p>
+            <div className="flex gap-3">
+              <button onClick={onCancel} className="flex-1 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm">Cancel</button>
+              <button onClick={onConfirm} className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold">Process Video</button>
+            </div>
+          </>
+        ) : needsRefresh ? (
+          /* ── Cookies exist but were used by a previous job ── */
+          <>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-900 flex items-center justify-center text-orange-400 text-xl flex-shrink-0">↻</div>
+              <div>
+                <p className="text-white font-semibold">Cookies need re-sync</p>
+                {lastModified && <p className="text-xs text-gray-400">Last synced {timeAgo(lastModified)} — used by a previous video</p>}
               </div>
             </div>
             <p className="text-sm text-gray-300">
-              Your YouTube cookies are ready. Click <strong>Process Video</strong> to continue.
+              YouTube cookies are single-use from our servers. Your last video used them up.
+              Please sync again before processing a new video.
             </p>
-            <div className="flex gap-3">
-              <button onClick={onCancel} className="flex-1 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm">
-                Cancel
-              </button>
-              <button onClick={onConfirm} className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold">
-                Process Video
+            {syncInstructions}
+            <div className="flex gap-3 flex-wrap">
+              <a href="/dashboard/settings" target="_blank" className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold text-center">
+                Open Extension / Settings
+              </a>
+              <button onClick={onConfirm} className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-400 hover:text-white text-sm">
+                Proceed anyway
               </button>
             </div>
+            <button onClick={onCancel} className="text-xs text-gray-600 hover:text-gray-400 text-center">Cancel</button>
           </>
         ) : (
+          /* ── Never synced ── */
           <>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-yellow-900 flex items-center justify-center text-yellow-400 text-xl flex-shrink-0">!</div>
               <div>
                 <p className="text-white font-semibold">Sync your YouTube cookies first</p>
-                <p className="text-xs text-gray-400">Required to download YouTube videos</p>
+                <p className="text-xs text-gray-400">Required to download YouTube videos from our servers</p>
               </div>
             </div>
             <p className="text-sm text-gray-300">
               Our servers need your YouTube session to bypass bot detection.
-              Install the Chrome extension and click <strong>Sync My YouTube Cookies</strong> — takes 5 seconds.
+              Takes 5 seconds with the Chrome extension.
             </p>
-            <div className="bg-gray-800 rounded-xl p-4 space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-gray-300">
-                <span className="text-indigo-400 font-bold">1.</span> Install the VidToReels Chrome extension
-              </div>
-              <div className="flex items-center gap-2 text-gray-300">
-                <span className="text-indigo-400 font-bold">2.</span> Make sure you&apos;re logged into YouTube
-              </div>
-              <div className="flex items-center gap-2 text-gray-300">
-                <span className="text-indigo-400 font-bold">3.</span> Click the extension → <strong>Sync My YouTube Cookies</strong>
-              </div>
-              <div className="flex items-center gap-2 text-gray-300">
-                <span className="text-indigo-400 font-bold">4.</span> Come back and submit your video
-              </div>
-            </div>
+            {syncInstructions}
             <div className="flex gap-3 flex-wrap">
-              <a
-                href="/dashboard/settings#cookies"
-                target="_blank"
-                className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold text-center"
-              >
+              <a href="/dashboard/settings" target="_blank" className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold text-center">
                 Get the Extension
               </a>
-              <button
-                onClick={onConfirm}
-                className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-400 hover:text-white text-sm"
-              >
+              <button onClick={onConfirm} className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-400 hover:text-white text-sm">
                 Proceed anyway
               </button>
             </div>
-            <button onClick={onCancel} className="text-xs text-gray-600 hover:text-gray-400 text-center">
-              Cancel
-            </button>
+            <button onClick={onCancel} className="text-xs text-gray-600 hover:text-gray-400 text-center">Cancel</button>
           </>
         )}
       </div>
