@@ -37,8 +37,7 @@ export function getPlan(key: string) {
   return PLANS[key as PlanKey] ?? PLANS.free;
 }
 
-// Count ALL non-deleted jobs immediately on submission.
-// Retrying a failed job reuses the same document — count stays the same.
-// Deleting a failed job removes the document — count decreases (fair refund).
-const BILLABLE_STATUSES = ["queued", "starting", "downloading", "processing", "rendering", "completed", "failed"] as const;
+// Debit on submission (queued). Refund automatically if job fails (failed excluded).
+// Retry creates a new job doc → debit again. Old failed doc is deleted.
+const BILLABLE_STATUSES = ["queued", "starting", "downloading", "processing", "rendering", "completed"] as const;
 export { BILLABLE_STATUSES };

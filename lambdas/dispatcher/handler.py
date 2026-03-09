@@ -204,7 +204,27 @@ pip install --quiet -r "$REPO/backend/requirements.txt"
 pip install --quiet pymongo boto3
 echo "[worker] python deps installed"
 
-# ── 7. Run the job ────────────────────────────────────────────────────────────
+# ── 7. bgutil PO token server (YouTube bot-detection bypass) ──────────────────
+export CURRENT_STEP="start-bgutil"
+echo "[worker] step: $CURRENT_STEP"
+# Install Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
+apt-get install -y -qq nodejs
+echo "[worker] node: $(node --version)"
+# Clone bgutil server and start it (provides YouTube PO tokens to yt-dlp)
+git clone --depth=1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /tmp/bgutil 2>/dev/null || true
+if [ -d /tmp/bgutil/server ]; then
+    cd /tmp/bgutil/server && npm install --quiet >/dev/null 2>&1 && node index.js &
+    sleep 5 && cd -
+    echo "[worker] bgutil PO token server started on :4416"
+else
+    echo "[worker] bgutil server dir not found - falling back to player_client"
+fi
+# Install yt-dlp bgutil plugin into venv (auto-used when server is running)
+pip install --quiet bgutil-ytdlp-pot-provider
+echo "[worker] bgutil plugin installed"
+
+# ── 9. Run the job ────────────────────────────────────────────────────────────
 export CURRENT_STEP="run-pipeline"
 echo "[worker] step: $CURRENT_STEP"
 cd "$REPO"

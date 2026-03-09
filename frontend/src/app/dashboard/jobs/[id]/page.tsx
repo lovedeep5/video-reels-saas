@@ -69,13 +69,12 @@ export default function JobDetailPage() {
   async function handleRetry() {
     setRetrying(true);
     try {
-      await jobsApi.retry(jobId);
-      const res = await jobsApi.get(jobId);
-      setJob(res.data);
-      jobRef.current = res.data;
+      const res = await jobsApi.retry(jobId);
+      const newJobId = res.data?.new_job_id;
+      if (newJobId) {
+        router.push(`/dashboard/jobs/${newJobId}`);
+      }
     } catch {
-      // ignore
-    } finally {
       setRetrying(false);
     }
   }
@@ -101,7 +100,7 @@ export default function JobDetailPage() {
             </p>
           )}
         </div>
-        {(job.status === "failed" || job.status === "starting") && (
+        {job.status === "failed" && (
           <div className="flex gap-2 shrink-0 ml-4">
             <button
               onClick={handleRetry}
@@ -110,15 +109,13 @@ export default function JobDetailPage() {
             >
               {retrying ? "Retrying..." : "Retry"}
             </button>
-            {job.status === "failed" && (
-              <button
-                onClick={handleDelete}
-                disabled={deleting || retrying}
-                className="text-xs text-red-400 hover:text-red-300 border border-red-800 hover:border-red-600 px-3 py-1.5 rounded-lg disabled:opacity-50"
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </button>
-            )}
+            <button
+              onClick={handleDelete}
+              disabled={deleting || retrying}
+              className="text-xs text-red-400 hover:text-red-300 border border-red-800 hover:border-red-600 px-3 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
           </div>
         )}
       </div>

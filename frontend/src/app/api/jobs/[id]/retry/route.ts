@@ -14,30 +14,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const job = await jobs.findOne({ _id: new ObjectId(id), user_id: user._id });
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
-  if (!["failed", "starting"].includes(job.status)) {
-    return NextResponse.json({ error: "Only failed or stuck jobs can be retried" }, { status: 400 });
+  if (job.status !== "failed") {
+    return NextResponse.json({ error: "Only failed jobs can be retried" }, { status: 400 });
   }
 
-  // Reset job to queued state, increment retry_count
-  await jobs.updateOne(
-    { _id: new ObjectId(id) },
-    {
-      $set: {
-        status: "queued",
-        progress: 0,
-        progress_message: "Queued for retry",
-      },
-      $unset: {
-        error_message: "",
-        completed_at: "",
-        ec2_instance_id: "",
-        started_at: "",
-      },
-      $inc: { retry_count: 1 },
-    }
-  );
+  // Create a fresh job with the same settings (new _id = new credit debit)
+  const result = await jobs.insertOne({
+    user_id: user._id!,
+    status: "queued",
+    source_type: job.source_type,
+    source_url: job.source_url,
+    clips_requested: job.clips_requested,
+    output_ratio: job.output_ratio ?? "9:16",
+    progress: 0,
+    progress_message: "Queued",
+    retry_count: 0,
+    created_at: new Date(),
+  });
 
-  await enqueueJob(id);
+  const newJobId = result.insertedId.toHexString();
 
-  return NextResponse.json({ message: "Job re-queued" });
+  // Enqueue the new job first, then delete the old one
+  await enqueueJob(newJobId);
+  await jobs.deleteOne({ _id: new ObjectId(id) });
+
+  return NextResponse.json({ message: "Retrying as new job", new_job_id: newJobId });
 }
