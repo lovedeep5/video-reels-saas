@@ -109,3 +109,15 @@ resource "aws_ssm_parameter" "razorpay_webhook_secret" {
   tags        = local.common_tags
   lifecycle { prevent_destroy = true }
 }
+
+resource "aws_ssm_parameter" "youtube_cookies" {
+  name        = "/vidtoreels/YOUTUBE_COOKIES"
+  description = "Netscape-format YouTube cookies for yt-dlp (upload manually via AWS console)"
+  type        = "SecureString"
+  value       = "placeholder"
+  tags        = local.common_tags
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [value]  # never overwrite — admin updates this manually
+  }
+}

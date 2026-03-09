@@ -204,40 +204,35 @@ pip install --quiet -r "$REPO/backend/requirements.txt"
 pip install --quiet pymongo boto3
 echo "[worker] python deps installed"
 
-# ── 7. bgutil PO token server (YouTube bot-detection bypass) ──────────────────
+# ── 7. YouTube cookies from SSM (primary bypass for bot detection) ────────────
+export CURRENT_STEP="fetch-youtube-cookies"
+echo "[worker] step: $CURRENT_STEP"
+YT_COOKIES=$(get_ssm YOUTUBE_COOKIES 2>/dev/null || echo "")
+if [ -n "$YT_COOKIES" ] && [ "$YT_COOKIES" != "placeholder" ]; then
+    echo "$YT_COOKIES" > /tmp/youtube_cookies.txt
+    echo "[worker] YouTube cookies loaded ($(wc -l < /tmp/youtube_cookies.txt) lines)"
+else
+    echo "[worker] No YouTube cookies in SSM yet"
+fi
+
+# ── 8. bgutil PO token server via Docker (supplementary bypass) ───────────────
 export CURRENT_STEP="start-bgutil"
 echo "[worker] step: $CURRENT_STEP"
-# Install Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
-apt-get install -y -qq nodejs
-echo "[worker] node: $(node --version)"
-# Clone bgutil repo
-git clone --depth=1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /tmp/bgutil 2>/dev/null || true
-# Start bgutil server — never fails the job (non-fatal helper function)
 _start_bgutil() {{
-    local sdir=""
-    for d in "/tmp/bgutil/server" "/tmp/bgutil"; do
-        if [ -f "$d/package.json" ]; then sdir="$d"; break; fi
-    done
-    if [ -z "$sdir" ]; then echo "[worker] bgutil: no server dir"; return 0; fi
-    npm install --quiet --prefix "$sdir" >/dev/null 2>&1 || true
-    for entry in "server.js" "index.js" "app.js"; do
-        if [ -f "$sdir/$entry" ]; then
-            node "$sdir/$entry" &
-            sleep 5
-            echo "[worker] bgutil server started: $sdir/$entry"
-            return 0
-        fi
-    done
-    echo "[worker] bgutil: no entry point found"
-    return 0
+    command -v docker >/dev/null || {{
+        curl -fsSL https://get.docker.com | sh >/dev/null 2>&1 || return 0
+    }}
+    docker pull brainicism/bgutil-ytdlp-pot-provider:latest >/dev/null 2>&1 || return 0
+    docker run -d --name bgutil-server -p 4416:4416 \
+        brainicism/bgutil-ytdlp-pot-provider >/dev/null 2>&1 || return 0
+    sleep 8
+    echo "[worker] bgutil server running on :4416"
 }}
 _start_bgutil || true
-# Install yt-dlp bgutil plugin into venv (auto-connects to server on :4416)
 pip install --quiet bgutil-ytdlp-pot-provider || true
 echo "[worker] bgutil setup done"
 
-# ── 9. Run the job ────────────────────────────────────────────────────────────
+# ── 9. Run the job (pipeline: download → transcribe → LLM → render → upload) ──
 export CURRENT_STEP="run-pipeline"
 echo "[worker] step: $CURRENT_STEP"
 cd "$REPO"

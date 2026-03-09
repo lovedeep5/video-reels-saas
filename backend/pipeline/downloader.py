@@ -25,11 +25,17 @@ def download_video(url: str, output_dir: Path, job_id: int) -> dict:
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
-        "overwrites": True,  # always re-download; prevents stale file reuse when job IDs are recycled
-        # web client + bgutil plugin provides PO token (bypasses bot detection).
-        # Falls back to ios/tv_embedded if bgutil server is not running.
+        "overwrites": True,
+        # web client: bgutil plugin provides po_token when server is running.
+        # Falls back to ios/tv_embedded if bgutil is not available.
         "extractor_args": {"youtube": {"player_client": ["web", "ios", "tv_embedded"]}},
     }
+
+    # Use cookies if available — most reliable bypass for YouTube bot detection on EC2
+    cookie_file = "/tmp/youtube_cookies.txt"
+    if os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100:
+        ydl_opts["cookiefile"] = cookie_file
+        print(f"[downloader] using YouTube cookies from {cookie_file}")
 
     print(f"[downloader] job_id={job_id} downloading: {url}")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
