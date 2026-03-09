@@ -40,5 +40,7 @@ export async function GET(
     { expiresIn: 3600 }
   );
 
-  return NextResponse.redirect(url);
+  // Return JSON instead of redirect — direct browser redirect to S3 avoids
+  // CORS errors that occur when fetch() follows a cross-origin redirect.
+  return NextResponse.json({ url });
 }

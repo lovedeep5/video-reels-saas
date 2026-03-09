@@ -18,17 +18,21 @@ function serializeJob(job: any) {
     error_message: job.error_message ?? null,
     created_at: job.created_at?.toISOString() ?? null,
     completed_at: job.completed_at?.toISOString() ?? null,
-    clips: (job.output_clips ?? []).map((s3Key: string, i: number) => ({
-      id: i,
-      clip_index: i,
-      s3_key: s3Key,
-      file_ready: true,
-      start_time: 0,
-      end_time: 0,
-      duration: 0,
-      importance_score: 0,
-      transcript_excerpt: null,
-    })),
+    clips: (job.output_clips ?? []).map((s3Key: string, i: number) => {
+      // Use rich metadata saved by run_job.py if available (new jobs)
+      const meta = job.output_clip_metadata?.[i];
+      return {
+        id: i,
+        clip_index: i,
+        s3_key: s3Key,
+        file_ready: true,
+        start_time: meta?.start_time ?? 0,
+        end_time: meta?.end_time ?? 0,
+        duration: meta?.duration ?? 0,
+        importance_score: meta?.importance_score ?? 0,
+        transcript_excerpt: meta?.transcript_excerpt ?? null,
+      };
+    }),
   };
 }
 

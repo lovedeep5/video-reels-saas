@@ -211,6 +211,7 @@ def _pipeline(job: dict, plan: dict):
     out_w, out_h = RATIO_MAP.get(ratio, (1080, 1920))
 
     output_clips = []
+    output_clip_metadata = []
     total = len(candidates)
 
     for idx, cand in enumerate(candidates):
@@ -237,6 +238,15 @@ def _pipeline(job: dict, plan: dict):
             s3_key = f"users/{job['user_id']}/jobs/{JOB_ID}/clip_{idx + 1}.mp4"
             if upload_to_s3(out_path, s3_key):
                 output_clips.append(s3_key)
+                output_clip_metadata.append({
+                    "clip_index": idx,
+                    "s3_key": s3_key,
+                    "start_time": round(float(cand["start"]), 1),
+                    "end_time": round(float(cand["end"]), 1),
+                    "duration": round(float(cand["end"]) - float(cand["start"]), 1),
+                    "importance_score": round(float(cand.get("score", 0)), 3),
+                    "transcript_excerpt": cand.get("transcript") or None,
+                })
                 Path(out_path).unlink(missing_ok=True)
             else:
                 log(f"[pipeline] S3 upload failed for clip {idx + 1}, skipping")
@@ -259,6 +269,7 @@ def _pipeline(job: dict, plan: dict):
         "progress": 100,
         "progress_message": f"{len(output_clips)}/{total} clips ready",
         "output_clips": output_clips,
+        "output_clip_metadata": output_clip_metadata,
         "completed_at": datetime.now(timezone.utc),
     }})
     log(f"====== Job {JOB_ID} completed — {len(output_clips)}/{total} clips uploaded to S3 ======")

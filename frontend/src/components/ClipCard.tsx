@@ -24,21 +24,22 @@ export default function ClipCard({ clip, jobId }: Props) {
     setDownloading(true);
     setError("");
     try {
-      const url = jobsApi.downloadUrl(jobId, clip.id);
-      const res = await fetch(url, { credentials: "include" });
+      // Step 1: get the presigned S3 URL from our API
+      const apiUrl = jobsApi.downloadUrl(jobId, clip.id);
+      const res = await fetch(apiUrl, { credentials: "include" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || `Server error ${res.status}`);
+        throw new Error(body.error || `Server error ${res.status}`);
       }
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
+      const { url } = await res.json();
+
+      // Step 2: open the presigned URL directly — avoids CORS on cross-origin fetch
       const a = document.createElement("a");
-      a.href = objectUrl;
+      a.href = url;
       a.download = `reel_clip_${clip.clip_index + 1}.mp4`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(objectUrl);
     } catch (e: unknown) {
       setError((e as Error).message || "Download failed");
     } finally {
