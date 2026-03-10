@@ -105,7 +105,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
-  const userCount = await users.countDocuments({ plan: key });
+  const userCount = await users.countDocuments({ plan: key as "free" | "pro" | "business" });
   if (userCount > 0) {
     return NextResponse.json(
       { error: `Cannot delete plan: ${userCount} user(s) are on this plan`, user_count: userCount },
