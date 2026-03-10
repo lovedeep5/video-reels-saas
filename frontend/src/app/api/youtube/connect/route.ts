@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+const PAID_PLANS = ["pro", "business"];
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!PAID_PLANS.includes(user.plan)) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+    return NextResponse.redirect(`${appUrl}/dashboard/settings?youtube=upgrade_required`);
+  }
 
   const clientId = process.env.YOUTUBE_CLIENT_ID;
   if (!clientId) {

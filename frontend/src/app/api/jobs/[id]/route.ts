@@ -16,6 +16,7 @@ function serializeJob(job: any) {
     clips_requested: job.clips_requested,
     output_ratio: job.output_ratio ?? "9:16",
     error_message: job.error_message ?? null,
+    error_type: job.error_type ?? null,
     created_at: job.created_at?.toISOString() ?? null,
     completed_at: job.completed_at?.toISOString() ?? null,
     clips: (job.output_clips ?? []).map((s3Key: string, i: number) => {

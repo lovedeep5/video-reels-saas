@@ -23,6 +23,11 @@ export async function POST(
   const user = await getCurrentUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const PAID_PLANS = ["pro", "business"];
+  if (!PAID_PLANS.includes(user.plan)) {
+    return NextResponse.json({ error: "YouTube publishing is available on Pro and Business plans" }, { status: 403 });
+  }
+
   if (!user.youtube_refresh_token) {
     return NextResponse.json({ error: "YouTube not connected" }, { status: 400 });
   }

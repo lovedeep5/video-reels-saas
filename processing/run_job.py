@@ -110,11 +110,8 @@ def run():
 
     log(f"user={job.get('user_id')} plan={plan_key} clips_requested={job.get('clips_requested')} url={job.get('source_url','')[:80]}")
 
-    # Download user-specific cookies from S3 (if they exist)
-    user_cookie_path = _fetch_user_cookies(str(job["user_id"]))
-
     try:
-        _pipeline(job, plan, user_cookie_path)
+        _pipeline(job, plan)
     except Exception as e:
         fail_job(f"Unexpected error: {e}\n{traceback.format_exc()}")
         sys.exit(1)
@@ -138,8 +135,8 @@ def _fetch_user_cookies(user_id: str) -> str | None:
         return None
 
 
-def _pipeline(job: dict, plan: dict, user_cookie_path: str | None = None):
-    from pipeline.downloader import download_video, get_video_info
+def _pipeline(job: dict, plan: dict):
+    from pipeline.downloader import download_video, get_video_info, BotDetectionError
     from pipeline.llm_scorer import select_clips_with_llm
     from pipeline.processor import check_ffmpeg, render_clip
     from pipeline.scorer import compute_audio_energy, select_best_clips
@@ -151,20 +148,44 @@ def _pipeline(job: dict, plan: dict, user_cookie_path: str | None = None):
         fail_job("FFmpeg not found on this instance")
         return
 
-    # ── 1. Download video ─────────────────────────────────────────────────────
+    # ── 1. Download video (try without cookies first, fallback to user cookies) ─
     update_job(status="downloading", progress=5, progress_message="Downloading video...")
+    info = None
     try:
-        info = download_video(job["source_url"], TEMP_DIR, JOB_ID, cookie_file=user_cookie_path)
-        source_path = info["path"]
-        video_title    = info["title"]
-        video_duration = info["duration"]
-        jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {
-            "video_title": video_title,
-            "video_duration": video_duration,
-        }})
+        info = download_video(job["source_url"], TEMP_DIR, JOB_ID, cookie_file=None)
+        log("[downloader] Downloaded without cookies")
+    except BotDetectionError as e:
+        log(f"[downloader] Bot detection without cookies: {e}")
+        # Lazy-fetch user cookies only when needed
+        update_job(progress=8, progress_message="YouTube blocked — retrying with your cookies...")
+        user_cookie_path = _fetch_user_cookies(str(job["user_id"]))
+        if user_cookie_path:
+            try:
+                info = download_video(job["source_url"], TEMP_DIR, JOB_ID, cookie_file=user_cookie_path)
+                log("[downloader] Downloaded with user cookies")
+            except BotDetectionError as e2:
+                jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {"error_type": "cookie_required"}})
+                fail_job(f"YouTube blocked the download even with your cookies. Try re-syncing your cookies via the Chrome extension. ({e2})")
+                return
+            except Exception as e2:
+                fail_job(f"Download failed after cookie retry: {e2}")
+                return
+        else:
+            # No cookies available — mobile user or never synced
+            jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {"error_type": "cookie_required"}})
+            fail_job("YouTube blocked this download. Sync your YouTube cookies using the Chrome extension on a desktop browser, then retry.")
+            return
     except Exception as e:
         fail_job(f"Download failed: {e}")
         return
+
+    source_path = info["path"]
+    video_title    = info["title"]
+    video_duration = info["duration"]
+    jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {
+        "video_title": video_title,
+        "video_duration": video_duration,
+    }})
 
     # Get actual dimensions
     try:

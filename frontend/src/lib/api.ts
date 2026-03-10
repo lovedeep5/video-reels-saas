@@ -77,6 +77,7 @@ export interface Job {
   clips_requested: number;
   output_ratio: string;
   error_message: string | null;
+  error_type: string | null;
   created_at: string;
   completed_at: string | null;
   clips: Clip[];
@@ -99,6 +100,10 @@ export interface Plan {
 export const authApi = {
   me: () => api.get<AuthUser>("/auth/me"),
 };
+
+export function isPaidPlan(plan: string) {
+  return plan === "pro" || plan === "business";
+}
 
 export const videoApi = {
   submitUrl: (url: string, clipsRequested: number, outputRatio: string = "9:16") =>

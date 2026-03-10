@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Clip, jobsApi, YouTubeStatus, youtubeApi } from "@/lib/api";
+import { Clip, jobsApi, YouTubeStatus, youtubeApi, authApi, isPaidPlan } from "@/lib/api";
 
 interface Props {
   clip: Clip;
@@ -200,12 +200,14 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
   const [showPublish, setShowPublish] = useState(false);
   const [ytStatus, setYtStatus] = useState<YouTubeStatus | null>(null);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(clip.youtube_url ?? null);
+  const [isPaid, setIsPaid] = useState(false);
   // Video player state
   const [playerUrl, setPlayerUrl] = useState<string | null>(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
 
   useEffect(() => {
     youtubeApi.status().then((r) => setYtStatus(r.data)).catch(() => {});
+    authApi.me().then((r) => setIsPaid(isPaidPlan(r.data.plan))).catch(() => {});
   }, []);
 
   async function getPresignedUrl(): Promise<string> {
@@ -375,8 +377,8 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
               )}
             </button>
 
-            {/* YouTube publish button — only if connected */}
-            {ytStatus?.connected && (
+            {/* YouTube publish — paid users only */}
+            {isPaid && ytStatus?.connected ? (
               <button
                 onClick={() => setShowPublish(true)}
                 title={publishedUrl ? "Republish to YouTube" : "Publish to YouTube"}
@@ -387,7 +389,22 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
                 </svg>
                 {publishedUrl ? "Republish" : "Publish"}
               </button>
-            )}
+            ) : isPaid && !ytStatus?.connected ? (
+              <a
+                href="/dashboard/settings"
+                className="inline-flex items-center justify-center gap-1.5 border border-red-900 text-red-400 hover:text-red-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
+              >
+                Connect YouTube
+              </a>
+            ) : !isPaid ? (
+              <a
+                href="/billing"
+                title="Upgrade to publish to YouTube"
+                className="inline-flex items-center justify-center gap-1.5 border border-indigo-800 text-indigo-400 hover:text-indigo-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
+              >
+                ↑ Upgrade to Publish
+              </a>
+            ) : null}
           </div>
         ) : (
           <div className="mt-auto text-sm text-gray-500 italic">Rendering...</div>

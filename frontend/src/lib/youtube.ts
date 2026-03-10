@@ -91,12 +91,16 @@ export async function uploadVideoToYouTube(
       body: JSON.stringify({
         snippet: {
           title: opts.title,
-          description: opts.description,
+          // Append #Shorts so YouTube classifies it in the Shorts feed
+          description: opts.description
+            ? `${opts.description}\n\n#Shorts`
+            : "#Shorts",
           categoryId: "22", // People & Blogs
-          tags: opts.tags ?? [],
+          tags: [...(opts.tags ?? []), "Shorts", "YouTubeShorts"],
         },
         status: {
           privacyStatus: opts.visibility,
+          selfDeclaredMadeForKids: false,
         },
       }),
     }

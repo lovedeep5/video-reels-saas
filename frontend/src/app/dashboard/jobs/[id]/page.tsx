@@ -8,19 +8,6 @@ import ClipCard from "@/components/ClipCard";
 
 const TERMINAL = ["completed", "failed"];
 
-function isBotDetectionError(msg: string | null): boolean {
-  if (!msg) return false;
-  const lower = msg.toLowerCase();
-  return (
-    lower.includes("sign in") ||
-    lower.includes("bot") ||
-    lower.includes("confirm you") ||
-    lower.includes("cookies") ||
-    lower.includes("private video") ||
-    lower.includes("age-restricted")
-  );
-}
-
 export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -154,30 +141,55 @@ export default function JobDetailPage() {
             <p className="text-red-400 text-sm">{job.error_message}</p>
           </div>
 
-          {/* Bot detection help banner */}
-          {isBotDetectionError(job.error_message) && (
-            <div className="bg-yellow-950 border border-yellow-700 rounded-xl p-5">
-              <p className="text-yellow-300 font-semibold mb-1">YouTube blocked the download</p>
-              <p className="text-yellow-400 text-sm mb-3">
-                YouTube requires a signed-in session to download this video from our servers.
-                Install our Chrome extension to sync your YouTube cookies — then retry.
-              </p>
-              <div className="flex flex-wrap gap-2">
+          {/* Cookie required banner */}
+          {job.error_type === "cookie_required" && (
+            <div className="bg-gray-900 border border-orange-800 rounded-xl p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-900/50 flex items-center justify-center text-orange-400 text-lg shrink-0">🔒</div>
+                <div>
+                  <p className="text-white font-semibold">YouTube restricted this video</p>
+                  <p className="text-sm text-gray-400 mt-0.5">
+                    YouTube blocked our servers from downloading this video. Some videos require a signed-in session to access.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-4 space-y-2 text-sm text-gray-300">
+                <p className="font-medium text-white text-xs uppercase tracking-wide mb-2">How to fix this</p>
+                {[
+                  "Open this page on a desktop or laptop",
+                  "Install the VidToReels Chrome extension",
+                  "Make sure you're logged into YouTube in Chrome",
+                  <>Click the extension → <strong>Sync My YouTube Cookies</strong></>,
+                  "Come back and click Retry below",
+                ].map((step, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-orange-400 font-bold shrink-0 text-xs mt-0.5">{i + 1}.</span>
+                    <span className="text-sm">{step}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-1">
                 <a
                   href="https://vidtoreels.com/extension"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 bg-yellow-700 hover:bg-yellow-600 text-white text-xs font-medium py-1.5 px-3 rounded-lg"
+                  className="inline-flex items-center gap-1.5 bg-orange-700 hover:bg-orange-600 text-white text-xs font-medium py-2 px-4 rounded-lg"
                 >
-                  Install Chrome Extension
+                  Get the Chrome Extension
                 </a>
                 <a
                   href="/dashboard/settings"
-                  className="inline-flex items-center gap-1.5 border border-yellow-700 text-yellow-400 hover:text-yellow-300 text-xs font-medium py-1.5 px-3 rounded-lg"
+                  className="inline-flex items-center gap-1.5 border border-orange-800 text-orange-400 hover:text-orange-300 text-xs font-medium py-2 px-4 rounded-lg"
                 >
                   Already installed? Check Settings
                 </a>
               </div>
+
+              <p className="text-xs text-gray-600">
+                On mobile? Open this page on a desktop browser to use the Chrome extension. Or try a different video — most public videos work without cookies.
+              </p>
             </div>
           )}
         </div>

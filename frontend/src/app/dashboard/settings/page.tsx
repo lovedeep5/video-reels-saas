@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { youtubeApi, YouTubeStatus } from "@/lib/api";
+import { youtubeApi, authApi, YouTubeStatus, AuthUser } from "@/lib/api";
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<YouTubeStatus | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -15,14 +16,14 @@ export default function SettingsPage() {
     if (ytResult === "connected") showToast("YouTube connected successfully!", true);
     else if (ytResult === "denied") showToast("YouTube connection was cancelled.", false);
     else if (ytResult === "error") showToast("YouTube connection failed. Please try again.", false);
+    else if (ytResult === "upgrade_required") showToast("YouTube publishing is available on Pro and Business plans.", false);
   }, [searchParams]);
 
   useEffect(() => {
-    youtubeApi
-      .status()
-      .then((r) => setStatus(r.data))
-      .catch(() => setStatus({ connected: false, configured: false }))
-      .finally(() => setLoading(false));
+    Promise.all([
+      youtubeApi.status().then((r) => setStatus(r.data)).catch(() => setStatus({ connected: false, configured: false })),
+      authApi.me().then((r) => setUser(r.data)).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
   function showToast(msg: string, ok: boolean) {
@@ -78,6 +79,21 @@ export default function SettingsPage() {
           <div className="bg-yellow-900/30 border border-yellow-800 rounded-lg p-4 text-sm text-yellow-300">
             YouTube integration is not configured. Add <code className="font-mono">YOUTUBE_CLIENT_ID</code> and{" "}
             <code className="font-mono">YOUTUBE_CLIENT_SECRET</code> to your environment variables.
+          </div>
+        ) : user && user.plan === "free" ? (
+          <div className="space-y-3">
+            <div className="bg-indigo-950/50 border border-indigo-800 rounded-lg p-4">
+              <p className="text-sm font-semibold text-white mb-1">Pro & Business feature</p>
+              <p className="text-sm text-gray-400">
+                Direct YouTube publishing is available on paid plans. Free users can download clips and upload manually.
+              </p>
+            </div>
+            <a
+              href="/billing"
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              Upgrade to Pro
+            </a>
           </div>
         ) : status.connected && status.channel ? (
           <div>

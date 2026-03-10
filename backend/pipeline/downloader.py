@@ -3,17 +3,73 @@ import os
 from pathlib import Path
 
 
-def download_video(url: str, output_dir: Path, job_id: str, cookie_file: str | None = None) -> dict:
+# Error messages that indicate YouTube is blocking the download
+BOT_DETECTION_PHRASES = [
+    "sign in to confirm",
+    "sign in to confirm you're not a bot",
+    "this video is private",
+    "age-restricted",
+    "http error 403",
+    "members-only",
+    "video unavailable",
+    "cookies",
+    "login required",
+    "this video requires payment",
+]
+
+
+class BotDetectionError(RuntimeError):
+    """Raised when yt-dlp fails due to YouTube bot/auth blocking."""
+    pass
+
+
+def _is_bot_detection(error_msg: str) -> bool:
+    lower = error_msg.lower()
+    return any(phrase in lower for phrase in BOT_DETECTION_PHRASES)
+
+
+def _ydl_opts(out_template: str, cookie_file: str | None) -> dict:
+    opts = {
+        "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best",
+        "outtmpl": out_template,
+        "merge_output_format": "mp4",
+        "quiet": False,
+        "no_warnings": False,
+        "noplaylist": True,
+        "overwrites": True,
+        "extractor_args": {"youtube": {"player_client": ["web", "ios"]}},
+        "js_runtimes": {"node": {}},
+    }
+    if cookie_file:
+        opts["cookiefile"] = cookie_file
+    return opts
+
+
+def _find_downloaded_file(output_dir: Path, job_id: str) -> str | None:
+    for ext in ("mp4", "mkv", "webm", "avi"):
+        candidate = output_dir / f"source_{job_id}.{ext}"
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
+def download_video(
+    url: str,
+    output_dir: Path,
+    job_id: str,
+    cookie_file: str | None = None,
+) -> dict:
     """
     Download video from URL. Returns dict with:
       path: str — local file path
       title: str — video title
       duration: float — duration in seconds
-    Raises RuntimeError on failure.
 
-    cookie_file: explicit path to a Netscape cookies file to use.
-      If None, falls back to /tmp/youtube_cookies.txt (admin cookies from S3).
-      If that's also missing, proceeds without cookies.
+    Raises BotDetectionError if YouTube blocks the download (auth required).
+    Raises RuntimeError on other failures.
+
+    cookie_file: path to a Netscape cookies file. If provided and valid, used
+      directly. If None, downloads without cookies (works for most public videos).
     """
     try:
         import yt_dlp
@@ -22,51 +78,31 @@ def download_video(url: str, output_dir: Path, job_id: str, cookie_file: str | N
 
     out_template = str(output_dir / f"source_{job_id}.%(ext)s")
 
-    # Cookie resolution: use provided user cookie file, or proceed without
+    # Validate cookie file
+    resolved_cookie = None
     if cookie_file and os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100:
         resolved_cookie = cookie_file
-        cookie_source = "user"
-    else:
-        resolved_cookie = None
-        cookie_source = "none"
 
-    print(f"[downloader] job_id={job_id} cookies={cookie_source} url={url}")
+    print(f"[downloader] job_id={job_id} cookies={'yes' if resolved_cookie else 'none'} url={url}")
 
-    ydl_opts = {
-        # Permissive format: try mp4+m4a, fall back to any best
-        "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best",
-        "outtmpl": out_template,
-        "merge_output_format": "mp4",
-        "quiet": False,  # show output so EC2 logs capture download progress + errors
-        "no_warnings": False,
-        "noplaylist": True,
-        "overwrites": True,
-        # web client + cookies: bypasses "Sign in to confirm you're not a bot".
-        # Requires yt-dlp[default] (installs yt-dlp-ejs) + Node.js 20 for JS challenge solving.
-        # ios as fallback for videos where web client fails.
-        "extractor_args": {"youtube": {"player_client": ["web", "ios"]}},
-        # Explicit Node.js runtime for EJS challenge solver (equivalent to --js-runtimes node)
-        "js_runtimes": {"node": {}},
+    try:
+        with yt_dlp.YoutubeDL(_ydl_opts(out_template, resolved_cookie)) as ydl:
+            info = ydl.extract_info(url, download=True)
+    except Exception as e:
+        msg = str(e)
+        if _is_bot_detection(msg):
+            raise BotDetectionError(msg)
+        raise RuntimeError(msg)
+
+    path = _find_downloaded_file(output_dir, job_id)
+    if not path:
+        raise RuntimeError("Downloaded file not found after yt-dlp completed")
+
+    return {
+        "path": path,
+        "title": info.get("title", "Untitled"),
+        "duration": float(info.get("duration") or 0),
     }
-
-    if resolved_cookie:
-        ydl_opts["cookiefile"] = resolved_cookie
-
-    print(f"[downloader] starting download...")
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-
-    # Find downloaded file
-    for ext in ("mp4", "mkv", "webm", "avi"):
-        candidate = output_dir / f"source_{job_id}.{ext}"
-        if candidate.exists():
-            return {
-                "path": str(candidate),
-                "title": info.get("title", "Untitled"),
-                "duration": float(info.get("duration") or 0),
-            }
-
-    raise RuntimeError("Downloaded file not found after yt-dlp completed")
 
 
 def get_video_info(path: str) -> dict:
