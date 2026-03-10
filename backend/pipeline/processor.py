@@ -62,11 +62,12 @@ def _render_single(source_path, output_path, start_time, duration, crop_params):
 
     if expr:
         # Dynamic tracking: crop x changes each second following the speaker
-        crop_filter = f"crop={cw}:{ch}:{expr}:{cy}:eval=frame"
+        # Use named params so eval=frame isn't confused with the 5th positional (keep_aspect)
+        crop_filter = f"crop=w={cw}:h={ch}:x={expr}:y={cy}:eval=frame"
     else:
         # Static crop (portrait source or no tracking needed)
         cx = crop_params["crop_x"]
-        crop_filter = f"crop={cw}:{ch}:{cx}:{cy}"
+        crop_filter = f"crop=w={cw}:h={ch}:x={cx}:y={cy}"
 
     vf = f"{crop_filter},scale={out_w}:{out_h}"
 
@@ -100,8 +101,8 @@ def _render_dual(source_path, output_path, start_time, duration, crop_params):
 
     # Each half is scaled to out_w × half_h
     filter_complex = (
-        f"[0:v]crop={cw}:{ch}:{crop_x_a}:{cy},scale={out_w}:{half_h}[top];"
-        f"[0:v]crop={cw}:{ch}:{crop_x_b}:{cy},scale={out_w}:{half_h}[bot];"
+        f"[0:v]crop=w={cw}:h={ch}:x={crop_x_a}:y={cy},scale={out_w}:{half_h}[top];"
+        f"[0:v]crop=w={cw}:h={ch}:x={crop_x_b}:y={cy},scale={out_w}:{half_h}[bot];"
         f"[top][bot]vstack=inputs=2[v]"
     )
 
