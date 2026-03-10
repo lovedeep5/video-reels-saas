@@ -29,7 +29,7 @@ S3_BUCKET       = os.environ["S3_BUCKET"]
 AWS_REGION      = os.environ.get("AWS_REGION", "ap-south-1")
 JOB_ID          = os.environ["JOB_ID"]
 
-WHISPER_MODEL   = os.environ.get("WHISPER_MODEL", "base")
+WHISPER_MODEL   = os.environ.get("WHISPER_MODEL", "tiny")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
 TEMP_DIR   = Path("/tmp/vidtoreels")
