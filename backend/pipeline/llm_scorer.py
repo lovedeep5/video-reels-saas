@@ -16,6 +16,7 @@ from typing import Optional
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+METADATA_MODEL = "openrouter/free"
 
 
 def _fmt_time(seconds: float) -> str:
@@ -221,3 +222,72 @@ For each clip also generate ready-to-use YouTube Shorts metadata:
     except Exception as e:
         print(f"[llm_scorer] LLM scoring failed: {e}")
         return []
+
+
+def generate_clip_metadata(
+    transcript: str,
+    video_title: str | None = None,
+    clip_index: int = 0,
+    api_key: str = "",
+) -> dict:
+    """
+    Given the transcript excerpt of a single clip, generate YouTube Shorts
+    metadata (title, description, tags) using openrouter/free with reasoning.
+    Returns dict with yt_title, yt_description, yt_tags (empty strings/list on failure).
+    """
+    import requests
+    import json
+    import re
+
+    empty = {"yt_title": "", "yt_description": "", "yt_tags": []}
+    if not api_key or not transcript:
+        return empty
+
+    title_line = f'Video title: "{video_title}"\n' if video_title else ""
+    prompt = f"""You are a YouTube Shorts expert. Given this transcript excerpt from clip {clip_index + 1}, generate viral YouTube Shorts metadata.
+
+{title_line}Transcript excerpt:
+\"{transcript}\"
+
+Return ONLY a JSON object (no markdown, no extra text):
+{{
+  "yt_title": "<catchy title under 70 chars optimised for Shorts search>",
+  "yt_description": "<2-3 sentences summarising what viewers get, end with a call-to-action>",
+  "yt_tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8"]
+}}"""
+
+    try:
+        response = requests.post(
+            OPENROUTER_URL,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://vidtoreels.com",
+                "X-Title": "VidToReels",
+            },
+            json={
+                "model": METADATA_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "reasoning": {"enabled": True},
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data["choices"][0]["message"]["content"]
+        print(f"[llm_scorer] metadata response clip {clip_index}: {text[:200]}")
+
+        # Extract JSON object from response
+        obj_match = re.search(r'\{.*\}', text, re.DOTALL)
+        if not obj_match:
+            raise ValueError("No JSON object in metadata response")
+
+        meta = json.loads(obj_match.group())
+        return {
+            "yt_title": str(meta.get("yt_title", "")).strip()[:100] or "",
+            "yt_description": str(meta.get("yt_description", "")).strip()[:5000] or "",
+            "yt_tags": [str(t).strip() for t in meta.get("yt_tags", []) if t][:15],
+        }
+    except Exception as e:
+        print(f"[llm_scorer] metadata generation failed for clip {clip_index}: {e}")
+        return empty

@@ -210,6 +210,7 @@ def _pipeline(job: dict, plan: dict):
     log(f"[pipeline] transcription done — {len(segments)} segments")
 
     # ── 4. LLM clip selection ─────────────────────────────────────────────────
+    from pipeline.llm_scorer import generate_clip_metadata
     n_clips = job.get("clips_requested", plan["clips_per_video"])
     candidates = []
     if segments:
@@ -241,6 +242,22 @@ def _pipeline(job: dict, plan: dict):
     if not candidates:
         fail_job("Could not identify suitable clip segments in this video")
         return
+
+    # ── 4b. Generate YouTube metadata for each clip ───────────────────────────
+    if OPENROUTER_API_KEY:
+        update_job(progress=45, progress_message="Generating YouTube metadata...")
+        for idx, cand in enumerate(candidates):
+            transcript_text = cand.get("transcript", "")
+            meta = generate_clip_metadata(
+                transcript=transcript_text,
+                video_title=video_title,
+                clip_index=idx,
+                api_key=OPENROUTER_API_KEY,
+            )
+            cand["yt_title"] = meta["yt_title"]
+            cand["yt_description"] = meta["yt_description"]
+            cand["yt_tags"] = meta["yt_tags"]
+            log(f"[pipeline] clip {idx} metadata: title={meta['yt_title'][:50]}")
 
     # ── 5. Render clips ───────────────────────────────────────────────────────
     out_dir = OUTPUT_DIR / JOB_ID
