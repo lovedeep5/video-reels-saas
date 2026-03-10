@@ -8,6 +8,7 @@ export interface AppUserMeta {
   name: string;
   email: string;
   plan: string;
+  is_admin?: boolean;
 }
 
 export function savePlanMeta(meta: AppUserMeta) {

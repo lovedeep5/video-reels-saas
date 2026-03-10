@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Clip, jobsApi, YouTubeStatus, youtubeApi, authApi, isPaidPlan } from "@/lib/api";
+import { Clip, jobsApi, YouTubeStatus, youtubeApi, authApi, isPaidPlan, AuthUser } from "@/lib/api";
 
 interface Props {
   clip: Clip;
@@ -201,13 +201,17 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
   const [ytStatus, setYtStatus] = useState<YouTubeStatus | null>(null);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(clip.youtube_url ?? null);
   const [isPaid, setIsPaid] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   // Video player state
   const [playerUrl, setPlayerUrl] = useState<string | null>(null);
   const [loadingPlayer, setLoadingPlayer] = useState(false);
 
   useEffect(() => {
     youtubeApi.status().then((r) => setYtStatus(r.data)).catch(() => {});
-    authApi.me().then((r) => setIsPaid(isPaidPlan(r.data.plan))).catch(() => {});
+    authApi.me().then((r: { data: AuthUser }) => {
+      setIsPaid(isPaidPlan(r.data.plan));
+      setIsAdmin(r.data.is_admin ?? false);
+    }).catch(() => {});
   }, []);
 
   async function getPresignedUrl(): Promise<string> {
@@ -377,8 +381,8 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
               )}
             </button>
 
-            {/* YouTube publish — paid users only */}
-            {isPaid && ytStatus?.connected ? (
+            {/* YouTube publish — paid users and admins */}
+            {(isPaid || isAdmin) && ytStatus?.connected ? (
               <button
                 onClick={() => setShowPublish(true)}
                 title={publishedUrl ? "Republish to YouTube" : "Publish to YouTube"}
@@ -389,14 +393,14 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
                 </svg>
                 {publishedUrl ? "Republish" : "Publish"}
               </button>
-            ) : isPaid && !ytStatus?.connected ? (
+            ) : (isPaid || isAdmin) && !ytStatus?.connected ? (
               <a
                 href="/dashboard/settings"
                 className="inline-flex items-center justify-center gap-1.5 border border-red-900 text-red-400 hover:text-red-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
               >
                 Connect YouTube
               </a>
-            ) : !isPaid ? (
+            ) : !isPaid && !isAdmin ? (
               <a
                 href="/billing"
                 title="Upgrade to publish to YouTube"

@@ -20,6 +20,7 @@ export default function Navbar() {
     { href: "/dashboard/keys", label: "API Keys" },
     { href: "/billing", label: "Billing" },
     { href: "/dashboard/settings", label: "Settings" },
+    ...(meta?.is_admin ? [{ href: "/dashboard/admin", label: "Admin" }] : []),
   ];
 
   return (

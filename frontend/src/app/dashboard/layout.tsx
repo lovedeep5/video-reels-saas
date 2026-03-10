@@ -22,7 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setReady(true);
         // Sync backend user record on first dashboard load.
         authApi.me()
-          .then((res) => savePlanMeta(res.data))
+          .then((res) => savePlanMeta({ ...res.data, is_admin: res.data.is_admin }))
           .catch((err) => console.error("[layout] authApi.me() failed:", err?.response?.status));
       }
     });

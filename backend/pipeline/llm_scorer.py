@@ -55,7 +55,7 @@ def _remove_overlaps(clips: list[dict], max_overlap_ratio: float = 0.25) -> list
 
 def _parse_llm_response(text: str, duration: float, n_clips: int) -> list[dict]:
     """Extract, validate, and deduplicate JSON clip list from Claude's response."""
-    json_match = re.search(r'\[.*?\]', text, re.DOTALL)
+    json_match = re.search(r'\[.*\]', text, re.DOTALL)
     if not json_match:
         raise ValueError("No JSON array found in response")
 
