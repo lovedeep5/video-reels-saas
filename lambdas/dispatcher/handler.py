@@ -150,6 +150,17 @@ trap _cleanup EXIT
 
 set -euo pipefail
 
+# ── 0. Swap file (2GB) — prevents OOM kill on t3.small (2GB RAM) ──────────────
+export CURRENT_STEP="setup-swap"
+echo "[worker] step: $CURRENT_STEP"
+if [ ! -f /swapfile ]; then
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo "[worker] swap enabled: $(free -h | grep Swap)"
+fi
+
 # ── 1. System dependencies ────────────────────────────────────────────────────
 export CURRENT_STEP="install-system-deps"
 echo "[worker] step: $CURRENT_STEP"

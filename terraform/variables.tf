@@ -30,7 +30,7 @@ variable "worker_subnet_id" {
 variable "worker_instance_type" {
   description = "EC2 instance type for video processing workers"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.small"
 }
 
 variable "max_concurrent_jobs" {
