@@ -24,7 +24,7 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const PAID_PLANS = ["pro", "business"];
-  if (!PAID_PLANS.includes(user.plan)) {
+  if (!user.is_admin && !PAID_PLANS.includes(user.plan)) {
     return NextResponse.json({ error: "YouTube publishing is available on Pro and Business plans" }, { status: 403 });
   }
 

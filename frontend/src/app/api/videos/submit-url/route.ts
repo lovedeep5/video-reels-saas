@@ -15,29 +15,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "url is required" }, { status: 400 });
   }
 
-  // Plan limits check
+  // Plan limits check — admins have no limits
   const plan = getPlan(user.plan);
-  if (plan.videos_per_month !== -1) {
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+  if (!user.is_admin) {
+    if (plan.videos_per_month !== -1) {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
 
-    const jobs = await jobsCol();
-    const used = await jobs.countDocuments({
-      user_id: user._id,
-      created_at: { $gte: startOfMonth },
-      status: { $in: [...BILLABLE_STATUSES] },
-    });
+      const jobs = await jobsCol();
+      const used = await jobs.countDocuments({
+        user_id: user._id,
+        created_at: { $gte: startOfMonth },
+        status: { $in: [...BILLABLE_STATUSES] },
+      });
 
-    if (used >= plan.videos_per_month) {
-      return NextResponse.json(
-        { error: `Monthly video limit reached (${used}/${plan.videos_per_month}). Upgrade your plan.` },
-        { status: 403 }
-      );
+      if (used >= plan.videos_per_month) {
+        return NextResponse.json(
+          { error: `Monthly video limit reached (${used}/${plan.videos_per_month}). Upgrade your plan.` },
+          { status: 403 }
+        );
+      }
     }
   }
 
-  const clips = Math.min(clips_requested, plan.clips_per_video);
+  const clips = user.is_admin ? clips_requested : Math.min(clips_requested, plan.clips_per_video);
 
   const jobs = await jobsCol();
   const result = await jobs.insertOne({

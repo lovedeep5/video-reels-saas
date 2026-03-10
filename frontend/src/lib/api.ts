@@ -45,6 +45,7 @@ export interface AuthUser {
   name: string;
   email: string;
   plan: string;
+  is_admin: boolean;
 }
 
 export interface Clip {

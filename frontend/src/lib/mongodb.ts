@@ -44,6 +44,7 @@ export interface DbUser {
   payment_provider?: string;
   subscription_expires_at?: Date;
   is_active: boolean;
+  is_admin?: boolean;
   created_at: Date;
   // YouTube OAuth (optional — only set when user connects their channel)
   youtube_refresh_token?: string;
@@ -112,6 +113,29 @@ export async function apiKeysCol(): Promise<Collection<DbApiKey>> {
 
 export async function paymentEventsCol(): Promise<Collection<DbPaymentEvent>> {
   return (await getDb()).collection<DbPaymentEvent>("payment_events");
+}
+
+export interface DbPlan {
+  _id?: ObjectId;
+  key: string;
+  name: string;
+  price: number;
+  currency: string;
+  clips_per_video: number;
+  videos_per_month: number;
+  max_duration_seconds: number;
+  auto_publish: boolean;
+  scheduled_publish: boolean;
+  features: string[];
+  is_active: boolean;
+  razorpay_plan_id: string | null;
+  razorpay_plan_history?: { plan_id: string; price: number; archived_at: Date }[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+export async function plansCol(): Promise<Collection<DbPlan>> {
+  return (await getDb()).collection<DbPlan>("plans");
 }
 
 export { ObjectId };

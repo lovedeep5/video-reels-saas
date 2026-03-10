@@ -8,6 +8,17 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const plan = getPlan(user.plan);
+
+  // Admins bypass all limits
+  if (user.is_admin) {
+    return NextResponse.json({
+      videos_used: 0,
+      videos_limit: -1,
+      clips_per_video: -1,
+      plan: user.plan,
+    });
+  }
+
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);

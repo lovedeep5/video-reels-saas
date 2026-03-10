@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const user = await getCurrentUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!PAID_PLANS.includes(user.plan)) {
+  if (!user.is_admin && !PAID_PLANS.includes(user.plan)) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
     return NextResponse.redirect(`${appUrl}/dashboard/settings?youtube=upgrade_required`);
   }

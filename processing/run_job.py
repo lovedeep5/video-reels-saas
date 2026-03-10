@@ -100,6 +100,7 @@ def run():
     user = users.find_one({"_id": job["user_id"]})
     plan_key = user.get("plan", "free") if user else "free"
     plan = PLANS.get(plan_key, PLANS["free"])
+    is_admin = bool(user.get("is_admin", False)) if user else False
 
     # Set env vars so pipeline modules can find their config
     os.environ["AWS_ACCESS_KEY_ID"]     = os.environ.get("AWS_ACCESS_KEY_ID", "")
@@ -199,7 +200,7 @@ def _pipeline(job: dict, plan: dict):
 
     # ── 2. Plan duration check ────────────────────────────────────────────────
     max_dur = plan.get("max_duration_seconds", 0)
-    if max_dur and video_duration > max_dur:
+    if max_dur and video_duration > max_dur and not is_admin:
         fail_job(f"Video duration ({int(video_duration)}s) exceeds plan limit ({max_dur}s)")
         return
 
