@@ -33,6 +33,9 @@ function serializeJob(job: any) {
         transcript_excerpt: meta?.transcript_excerpt ?? null,
         youtube_video_id: meta?.youtube_video_id ?? null,
         youtube_url: meta?.youtube_url ?? null,
+        yt_title: meta?.yt_title ?? null,
+        yt_description: meta?.yt_description ?? null,
+        yt_tags: meta?.yt_tags ?? [],
       };
     }),
   };

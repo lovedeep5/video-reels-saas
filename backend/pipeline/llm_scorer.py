@@ -79,6 +79,9 @@ def _parse_llm_response(text: str, duration: float, n_clips: int) -> list[dict]:
             "end": round(end, 1),
             "score": 1.0,
             "transcript": transcript_text,
+            "yt_title": clip.get("yt_title", ""),
+            "yt_description": clip.get("yt_description", ""),
+            "yt_tags": clip.get("yt_tags", []) if isinstance(clip.get("yt_tags"), list) else [],
         })
 
     # Remove overlapping clips, then sort chronologically
@@ -172,12 +175,20 @@ OUTPUT FORMAT:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Respond ONLY with a valid JSON array. No markdown, no explanation, no extra text before or after.
 
+For each clip also generate ready-to-use YouTube Shorts metadata:
+- "yt_title": catchy title under 70 characters, optimised for Shorts search
+- "yt_description": 2–3 sentences summarising what the viewer will get. End with a call-to-action.
+- "yt_tags": 8–12 relevant hashtag-style tags as a JSON array of strings (no # symbol)
+
 [
   {{
     "start_seconds": <integer>,
     "end_seconds": <integer>,
     "hook": "<the opening words of this clip — first 5–10 words spoken>",
-    "reason": "<2 sentences: what makes this clip viral-worthy and why the boundaries are correct>"
+    "reason": "<2 sentences: what makes this clip viral-worthy and why the boundaries are correct>",
+    "yt_title": "<YouTube Shorts title under 70 chars>",
+    "yt_description": "<2-3 sentence description with CTA>",
+    "yt_tags": ["tag1", "tag2", "tag3"]
   }}
 ]"""
 

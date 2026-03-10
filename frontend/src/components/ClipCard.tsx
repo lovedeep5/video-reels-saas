@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Clip, jobsApi, youtubeApi, YouTubeStatus } from "@/lib/api";
+import { Clip, jobsApi, YouTubeStatus, youtubeApi } from "@/lib/api";
 
 interface Props {
   clip: Clip;
@@ -29,34 +29,15 @@ interface PublishModalProps {
 }
 
 function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [tags, setTags] = useState(""); // comma-separated
+  const [title, setTitle] = useState(clip.yt_title ?? "");
+  const [description, setDescription] = useState(clip.yt_description ?? "");
+  const [tags, setTags] = useState((clip.yt_tags ?? []).join(", "));
   const [visibility, setVisibility] = useState<"private" | "unlisted" | "public">("private");
-  const [suggesting, setSuggesting] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url: string } | null>(null);
   const [error, setError] = useState("");
 
-  async function handleSuggest() {
-    setSuggesting(true);
-    setError("");
-    try {
-      const res = await youtubeApi.suggestMetadata({
-        transcript: clip.transcript_excerpt,
-        video_title: videoTitle,
-        clip_index: clip.clip_index,
-        duration: clip.duration,
-      });
-      setTitle(res.data.title);
-      setDescription(res.data.description);
-      setTags(res.data.tags.join(", "));
-    } catch {
-      setError("AI suggestion failed. Fill in fields manually.");
-    } finally {
-      setSuggesting(false);
-    }
-  }
+  const hasAiMeta = !!(clip.yt_title || clip.yt_description || clip.yt_tags?.length);
 
   async function handlePublish() {
     if (!title.trim()) {
@@ -117,29 +98,15 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
           </div>
         ) : (
           <div className="p-6 flex flex-col gap-4">
-            {/* AI suggest button */}
-            <button
-              onClick={handleSuggest}
-              disabled={suggesting}
-              className="flex items-center justify-center gap-2 border border-indigo-600 text-indigo-400 hover:bg-indigo-600/10 disabled:opacity-50 text-sm py-2 px-4 rounded-lg transition-colors"
-            >
-              {suggesting ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  Generating suggestions...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                  </svg>
-                  AI Suggest Title, Description & Tags
-                </>
-              )}
-            </button>
+            {/* AI pre-fill notice */}
+            {hasAiMeta && (
+              <div className="flex items-center gap-2 text-xs text-indigo-400 bg-indigo-950/40 border border-indigo-900 rounded-lg px-3 py-2">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                AI-generated during processing — edit freely before publishing
+              </div>
+            )}
 
             {/* Title */}
             <div>

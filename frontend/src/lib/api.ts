@@ -59,6 +59,9 @@ export interface Clip {
   s3_key: string | null;
   youtube_video_id: string | null;
   youtube_url: string | null;
+  yt_title: string | null;
+  yt_description: string | null;
+  yt_tags: string[];
 }
 
 export interface Job {

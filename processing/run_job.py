@@ -268,6 +268,9 @@ def _pipeline(job: dict, plan: dict, user_cookie_path: str | None = None):
                     "duration": round(float(cand["end"]) - float(cand["start"]), 1),
                     "importance_score": round(float(cand.get("score", 0)), 3),
                     "transcript_excerpt": cand.get("transcript") or None,
+                    "yt_title": cand.get("yt_title") or None,
+                    "yt_description": cand.get("yt_description") or None,
+                    "yt_tags": cand.get("yt_tags") or [],
                 })
                 Path(out_path).unlink(missing_ok=True)
             else:
