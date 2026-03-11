@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     created_at: new Date(),
   };
   if (isAdminRetryingOther) {
-    newDoc.admin_retry_user_id = user._id.toString();
+    newDoc.admin_retry_user_id = user._id!.toString();
   }
 
   const result = await jobs.insertOne(newDoc as any);
