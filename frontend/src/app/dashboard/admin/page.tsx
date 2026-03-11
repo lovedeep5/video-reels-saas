@@ -43,6 +43,9 @@ export default function AdminOverviewPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bannerText, setBannerText] = useState("");
+  const [bannerSaving, setBannerSaving] = useState(false);
+  const [bannerSaved, setBannerSaved] = useState(false);
 
   useEffect(() => {
     authApi.me().then((r) => {
@@ -53,7 +56,25 @@ export default function AdminOverviewPage() {
       .then((r) => setStats(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    api.get<{ text: string }>("/admin/notification")
+      .then((r) => setBannerText(r.data.text))
+      .catch(() => {});
   }, []); // eslint-disable-line
+
+  async function saveBanner() {
+    setBannerSaving(true);
+    setBannerSaved(false);
+    try {
+      await api.put("/admin/notification", { text: bannerText });
+      setBannerSaved(true);
+      setTimeout(() => setBannerSaved(false), 2500);
+    } catch {
+      // ignore
+    } finally {
+      setBannerSaving(false);
+    }
+  }
 
   if (loading) return <div className="text-gray-400 text-sm">Loading...</div>;
   if (!stats) return null;
@@ -74,6 +95,28 @@ export default function AdminOverviewPage() {
           <Link href="/dashboard/admin/plans" className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-lg">
             Manage Plans
           </Link>
+        </div>
+      </div>
+
+      {/* Notification banner editor */}
+      <div className="bg-gray-800 border border-gray-700 rounded-xl p-5 mb-8">
+        <h2 className="text-sm font-semibold text-white mb-1">Notification Banner</h2>
+        <p className="text-xs text-gray-500 mb-3">Shown to all users at the top of the dashboard. Leave empty to hide.</p>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={bannerText}
+            onChange={(e) => setBannerText(e.target.value)}
+            placeholder="e.g. App is currently in beta — some features may change."
+            className="flex-1 bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-amber-500 placeholder-gray-600"
+          />
+          <button
+            onClick={saveBanner}
+            disabled={bannerSaving}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
+          >
+            {bannerSaving ? "Saving…" : bannerSaved ? "Saved ✓" : "Save"}
+          </button>
         </div>
       </div>
 

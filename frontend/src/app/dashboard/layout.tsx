@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
+import NotificationBar from "@/components/NotificationBar";
 import { authApi } from "@/lib/api";
 import { savePlanMeta } from "@/lib/auth";
 
@@ -31,6 +32,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+      {ready && <NotificationBar />}
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8">
         {ready ? children : (
           <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
