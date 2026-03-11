@@ -66,6 +66,7 @@ export interface DbJob {
   video_duration?: number;
   clips_requested: number;
   output_ratio: string;
+  include_captions?: boolean;
   progress: number;
   progress_message: string;
   output_clips?: string[];   // S3 keys
