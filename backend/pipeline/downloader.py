@@ -30,7 +30,7 @@ def _is_bot_detection(error_msg: str) -> bool:
 
 def _ydl_opts(out_template: str, cookie_file: str | None) -> dict:
     opts = {
-        "format": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best",
+        "format": "bestvideo[height<=1440][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1440]+bestaudio/bestvideo+bestaudio/best",
         "outtmpl": out_template,
         "merge_output_format": "mp4",
         "quiet": False,

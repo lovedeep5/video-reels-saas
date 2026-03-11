@@ -205,8 +205,10 @@ def _pipeline(job: dict, plan: dict):
         return
 
     # ── 3. Transcribe ─────────────────────────────────────────────────────────
+    include_captions = job.get("include_captions", False)
     update_job(status="processing", progress=20, progress_message="Transcribing audio...")
-    segments = transcribe(source_path, WHISPER_MODEL, str(TEMP_DIR))
+    # task="translate" forces English output for any source language (Hindi, etc.)
+    segments = transcribe(source_path, WHISPER_MODEL, str(TEMP_DIR), task="translate" if include_captions else "transcribe")
     log(f"[pipeline] transcription done — {len(segments)} segments")
 
     # ── 4. LLM clip selection ─────────────────────────────────────────────────
@@ -287,13 +289,25 @@ def _pipeline(job: dict, plan: dict):
         )
         out_path = str(out_dir / f"clip_{idx + 1}.mp4")
 
+        # Generate ASS subtitle file for this clip if captions requested
+        subtitle_path = None
+        if include_captions and segments:
+            from pipeline.transcriber import generate_ass
+            ass_content = generate_ass(segments, cand["start"], cand["end"], out_w, out_h)
+            subtitle_path = str(out_dir / f"sub_{idx + 1}.ass")
+            Path(subtitle_path).write_text(ass_content, encoding="utf-8")
+
         success = render_clip(
             source_path=source_path,
             output_path=out_path,
             start_time=cand["start"],
             duration=cand["end"] - cand["start"],
             crop_params=crop_params,
+            subtitle_path=subtitle_path,
         )
+
+        if subtitle_path:
+            Path(subtitle_path).unlink(missing_ok=True)
 
         if success and Path(out_path).exists():
             s3_key = f"users/{job['user_id']}/jobs/{JOB_ID}/clip_{idx + 1}.mp4"

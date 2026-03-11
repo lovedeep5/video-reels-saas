@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { url, clips_requested = 5, output_ratio = "9:16" } = body;
+  const { url, clips_requested = 5, output_ratio = "9:16", include_captions = false } = body;
 
   if (!url || typeof url !== "string") {
     return NextResponse.json({ error: "url is required" }, { status: 400 });
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     source_url: url,
     clips_requested: clips,
     output_ratio,
+    include_captions: Boolean(include_captions),
     progress: 0,
     progress_message: "Queued",
     retry_count: 0,

@@ -51,10 +51,12 @@ def _load_model(model_name: str):
     return _whisper_model
 
 
-def transcribe(video_path: str, model_name: str = "base", temp_dir: Optional[str] = None) -> list[dict]:
+def transcribe(video_path: str, model_name: str = "base", temp_dir: Optional[str] = None, task: str = "transcribe") -> list[dict]:
     """
     Transcribe audio from video. Returns list of segments:
       [{"start": float, "end": float, "text": str}, ...]
+    task="transcribe" keeps the original language.
+    task="translate"  forces English output (any source language -> English).
     Returns empty list if no Whisper backend is available.
     """
     if not _check_whisper():
@@ -75,13 +77,13 @@ def transcribe(video_path: str, model_name: str = "base", temp_dir: Optional[str
         backend = _detect_backend()
 
         if backend == "faster":
-            raw_segments, _ = model.transcribe(source, beam_size=5, language=None)
+            raw_segments, _ = model.transcribe(source, beam_size=5, language=None, task=task)
             segments = [
                 {"start": float(s.start), "end": float(s.end), "text": s.text.strip()}
                 for s in raw_segments
             ]
         else:
-            result = model.transcribe(source, verbose=False, task="transcribe")
+            result = model.transcribe(source, verbose=False, task=task)
             segments = [
                 {"start": float(s["start"]), "end": float(s["end"]), "text": s["text"].strip()}
                 for s in result.get("segments", [])

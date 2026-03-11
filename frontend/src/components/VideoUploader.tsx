@@ -56,6 +56,7 @@ export default function VideoUploader() {
   const [clips, setClips] = useState(5);
   const [ratio, setRatio] = useState("9:16");
   const [customRatio, setCustomRatio] = useState("");
+  const [includeCaptions, setIncludeCaptions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -90,9 +91,9 @@ export default function VideoUploader() {
     try {
       let res;
       if (tab === "url") {
-        res = await videoApi.submitUrl(url.trim(), clips, effectiveRatio);
+        res = await videoApi.submitUrl(url.trim(), clips, effectiveRatio, includeCaptions);
       } else {
-        res = await videoApi.upload(file!, clips, effectiveRatio);
+        res = await videoApi.upload(file!, clips, effectiveRatio, includeCaptions);
       }
       router.push(`/dashboard/jobs/${res.data.job_id}`);
     } catch (err: unknown) {
@@ -212,6 +213,27 @@ export default function VideoUploader() {
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>1</span><span>10</span>
+        </div>
+      </div>
+
+      {/* Captions toggle */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setIncludeCaptions(!includeCaptions)}
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${
+            includeCaptions ? "bg-indigo-600" : "bg-gray-700"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              includeCaptions ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+        <div>
+          <span className="text-sm font-medium text-gray-300">Include Captions</span>
+          <p className="text-xs text-gray-500">English subtitles burned into video</p>
         </div>
       </div>
 

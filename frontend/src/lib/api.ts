@@ -107,14 +107,15 @@ export function isPaidPlan(plan: string) {
 }
 
 export const videoApi = {
-  submitUrl: (url: string, clipsRequested: number, outputRatio: string = "9:16") =>
-    api.post("/videos/submit-url", { url, clips_requested: clipsRequested, output_ratio: outputRatio }),
+  submitUrl: (url: string, clipsRequested: number, outputRatio: string = "9:16", includeCaptions: boolean = false) =>
+    api.post("/videos/submit-url", { url, clips_requested: clipsRequested, output_ratio: outputRatio, include_captions: includeCaptions }),
 
-  upload: (file: File, clipsRequested: number, outputRatio: string = "9:16") => {
+  upload: (file: File, clipsRequested: number, outputRatio: string = "9:16", includeCaptions: boolean = false) => {
     const form = new FormData();
     form.append("file", file);
     form.append("clips_requested", String(clipsRequested));
     form.append("output_ratio", outputRatio);
+    form.append("include_captions", String(includeCaptions));
     return api.post("/videos/upload", form);
   },
 };
