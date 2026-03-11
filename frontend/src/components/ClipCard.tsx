@@ -32,7 +32,7 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
   const [title, setTitle] = useState(clip.yt_title ?? "");
   const [description, setDescription] = useState(clip.yt_description ?? "");
   const [tags, setTags] = useState((clip.yt_tags ?? []).join(", "));
-  const [visibility, setVisibility] = useState<"private" | "unlisted" | "public">("private");
+  const [visibility, setVisibility] = useState<"private" | "unlisted" | "public">("public");
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url: string } | null>(null);
   const [error, setError] = useState("");
