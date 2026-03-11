@@ -46,6 +46,8 @@ function serializeJob(job: any) {
         yt_title: meta?.yt_title ?? null,
         yt_description: meta?.yt_description ?? null,
         yt_tags: meta?.yt_tags ?? [],
+        instagram_media_id: meta?.instagram_media_id ?? null,
+        instagram_url: meta?.instagram_url ?? null,
       };
     }),
   };

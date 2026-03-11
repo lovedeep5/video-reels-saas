@@ -81,6 +81,9 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <span className="text-xl font-bold shimmer-text">VidToReels</span>
           <div className="flex items-center gap-4">
+            <Link href="/docs" className="text-gray-400 hover:text-white text-sm transition-colors">
+              API Docs
+            </Link>
             <Link href="/login" className="text-gray-400 hover:text-white text-sm transition-colors">
               Sign in
             </Link>
@@ -410,6 +413,7 @@ export default function LandingPage() {
             © {new Date().getFullYear()} VidToReels. Built for creators.
           </p>
           <div className="flex gap-4 text-xs text-gray-500">
+            <Link href="/docs" className="hover:text-white transition-colors">API Docs</Link>
             <Link href="/login" className="hover:text-white transition-colors">Sign in</Link>
             <Link href="/register" className="hover:text-white transition-colors">Register</Link>
           </div>

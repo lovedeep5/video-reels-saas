@@ -53,6 +53,14 @@ export interface DbUser {
     channel_title: string;
     connected_at: Date;
   };
+  // Instagram OAuth (optional — long-lived token, 60 days)
+  instagram_access_token?: string;
+  instagram_token_updated_at?: Date;
+  instagram_account?: {
+    ig_user_id: string;
+    username: string;
+    connected_at: Date;
+  };
 }
 
 export interface DbJob {

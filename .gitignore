@@ -64,3 +64,10 @@ terraform/terraform.tfstate.backup
 # ── Lambda build artifacts ─────────────────────────────────────────────────────
 lambdas/*/build/
 lambdas/**/*.zip
+
+# ── Test / local scripts ──────────────────────────────────────────────────────
+scripts/test_videos/
+scripts/output/
+scripts/*.png
+scripts/*.js
+temp/
