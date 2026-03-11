@@ -214,9 +214,8 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
     }).catch(() => {});
   }, []);
 
-  async function getPresignedUrl(inline = false): Promise<string> {
-    const base = jobsApi.downloadUrl(jobId, clip.id);
-    const apiUrl = inline ? `${base}?inline=1` : base;
+  async function getPresignedUrl(): Promise<string> {
+    const apiUrl = jobsApi.downloadUrl(jobId, clip.id);
     const res = await fetch(apiUrl, { credentials: "include" });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -235,7 +234,7 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
     setLoadingPlayer(true);
     setDownloadError("");
     try {
-      const url = await getPresignedUrl(true);
+      const url = await getPresignedUrl();
       setPlayerUrl(url);
     } catch (e: unknown) {
       setDownloadError((e as Error).message || "Failed to load video");
@@ -248,7 +247,7 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
     setDownloading(true);
     setDownloadError("");
     try {
-      const url = playerUrl ?? await getPresignedUrl(false);
+      const url = playerUrl ?? await getPresignedUrl();
       const a = document.createElement("a");
       a.href = url;
       a.download = `reel_clip_${clip.clip_index + 1}.mp4`;
