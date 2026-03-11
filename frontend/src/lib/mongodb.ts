@@ -70,6 +70,7 @@ export interface DbJob {
   progress: number;
   progress_message: string;
   output_clips?: string[];   // S3 keys
+  admin_retry_user_id?: string;
   error_message?: string;
   retry_count: number;
   ec2_instance_id?: string;

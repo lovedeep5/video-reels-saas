@@ -23,7 +23,10 @@ export async function GET(
   if (!ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid job id" }, { status: 400 });
 
   const jobs = await jobsCol();
-  const job = await jobs.findOne({ _id: new ObjectId(id), user_id: user._id });
+  const filter = user.is_admin
+    ? { _id: new ObjectId(id) }
+    : { _id: new ObjectId(id), user_id: user._id };
+  const job = await jobs.findOne(filter);
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
   const clipIndex = parseInt(clipId, 10);

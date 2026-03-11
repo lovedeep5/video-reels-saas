@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { jobsCol, ObjectId } from "@/lib/mongodb";
+import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION || "ap-south-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
 
 function serializeJob(job: any) {
   return {
@@ -50,7 +59,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid job id" }, { status: 400 });
 
   const jobs = await jobsCol();
-  const job = await jobs.findOne({ _id: new ObjectId(id), user_id: user._id });
+  const filter = user.is_admin
+    ? { _id: new ObjectId(id) }
+    : { _id: new ObjectId(id), user_id: user._id };
+  const job = await jobs.findOne(filter);
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
   return NextResponse.json(serializeJob(job));
@@ -64,10 +76,25 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid job id" }, { status: 400 });
 
   const jobs = await jobsCol();
-  const job = await jobs.findOne({ _id: new ObjectId(id), user_id: user._id });
+  // Admins can find any job; regular users only their own
+  const filter = user.is_admin
+    ? { _id: new ObjectId(id) }
+    : { _id: new ObjectId(id), user_id: user._id };
+  const job = await jobs.findOne(filter);
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
-  if (job.status !== "failed") {
+
+  if (!user.is_admin && job.status !== "failed") {
     return NextResponse.json({ error: "Only failed jobs can be deleted" }, { status: 400 });
+  }
+
+  // Delete S3 clips if any
+  const s3Keys: string[] = job.output_clips ?? [];
+  if (s3Keys.length > 0) {
+    await Promise.all(
+      s3Keys.map((key) =>
+        s3.send(new DeleteObjectCommand({ Bucket: process.env.S3_BUCKET!, Key: key }))
+      )
+    );
   }
 
   await jobs.deleteOne({ _id: new ObjectId(id) });

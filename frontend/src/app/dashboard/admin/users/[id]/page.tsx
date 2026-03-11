@@ -2,7 +2,18 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import api, { authApi } from "@/lib/api";
+import api, { authApi, jobsApi } from "@/lib/api";
+
+interface AdminJob {
+  id: string;
+  status: string;
+  source_url: string | null;
+  video_title: string | null;
+  created_at: string;
+  clip_count: number;
+  output_clips: string[];
+  output_ratio: string;
+}
 
 interface AdminUserDetail {
   id: string;
@@ -12,15 +23,7 @@ interface AdminUserDetail {
   is_admin: boolean;
   is_active: boolean;
   created_at: string;
-  jobs: {
-    id: string;
-    status: string;
-    source_url: string | null;
-    video_title: string | null;
-    created_at: string;
-    clip_count: number;
-    output_ratio: string;
-  }[];
+  jobs: AdminJob[];
 }
 
 interface PlanOption {
@@ -44,12 +47,122 @@ const STATUS_BADGE: Record<string, string> = {
   rendering: "bg-purple-900 text-purple-300",
 };
 
+function ClipThumb({ jobId, clipIndex }: { jobId: string; clipIndex: number }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    api
+      .get<{ url: string }>(`/jobs/${jobId}/clips/${clipIndex}/download`)
+      .then((r) => setUrl(r.data.url))
+      .catch(() => {});
+  }, []); // eslint-disable-line
+  return url ? (
+    <video
+      src={url}
+      className="w-14 h-24 object-cover rounded bg-gray-700 shrink-0"
+      muted
+      preload="metadata"
+    />
+  ) : (
+    <div className="w-14 h-24 bg-gray-700 rounded shrink-0 animate-pulse" />
+  );
+}
+
+function JobCard({
+  job,
+  onRetry,
+  onDelete,
+  onFlash,
+}: {
+  job: AdminJob;
+  onRetry: (id: string) => void;
+  onDelete: (id: string) => void;
+  onFlash: (text: string, type: "success" | "error") => void;
+}) {
+  const [retrying, setRetrying] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleRetry() {
+    setRetrying(true);
+    try {
+      await jobsApi.retry(job.id);
+      onRetry(job.id);
+      onFlash("Job queued for retry", "success");
+    } catch (e: any) {
+      onFlash(e?.response?.data?.error || "Retry failed", "error");
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm("Delete this job and all its clips? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      await jobsApi.deleteJob(job.id);
+      onDelete(job.id);
+    } catch (e: any) {
+      onFlash(e?.response?.data?.error || "Delete failed", "error");
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0 mr-3">
+          <p className="text-white text-sm font-medium truncate">
+            {job.video_title || job.source_url || `Job #${job.id.slice(-6)}`}
+          </p>
+          {job.source_url && job.video_title && (
+            <p className="text-gray-600 text-xs truncate mt-0.5">{job.source_url}</p>
+          )}
+          <p className="text-gray-600 text-xs mt-0.5">
+            {new Date(job.created_at).toLocaleDateString()} · {job.output_ratio} ·{" "}
+            {job.clip_count} clip{job.clip_count !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${STATUS_BADGE[job.status] ?? "bg-gray-700 text-gray-300"}`}
+        >
+          {job.status}
+        </span>
+      </div>
+
+      {job.output_clips.length > 0 && (
+        <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+          {job.output_clips.map((_, i) => (
+            <ClipThumb key={i} jobId={job.id} clipIndex={i} />
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2 justify-end pt-1">
+        <button
+          onClick={handleRetry}
+          disabled={retrying || deleting}
+          className="text-xs px-3 py-1.5 rounded-lg border border-blue-800 text-blue-400 hover:text-blue-300 hover:border-blue-600 disabled:opacity-40"
+        >
+          {retrying ? "Retrying..." : "Retry"}
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={deleting || retrying}
+          className="text-xs px-3 py-1.5 rounded-lg border border-red-900 text-red-400 hover:text-red-300 hover:border-red-700 disabled:opacity-40"
+        >
+          {deleting ? "Deleting..." : "Delete"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminUserDetailPage() {
   const params = useParams();
   const router = useRouter();
   const userId = String(params.id);
 
   const [user, setUser] = useState<AdminUserDetail | null>(null);
+  const [userJobs, setUserJobs] = useState<AdminJob[]>([]);
   const [plans, setPlans] = useState<PlanOption[]>([]);
   const [myId, setMyId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -71,6 +184,7 @@ export default function AdminUserDetailPage() {
       api.get<PlanOption[]>("/admin/plans"),
     ]).then(([userRes, plansRes]) => {
       setUser(userRes.data);
+      setUserJobs(userRes.data.jobs);
       setSelectedPlan(userRes.data.plan);
       setPlans(plansRes.data.map((p: any) => ({ key: p.key, name: p.name })));
     }).catch(() => router.replace("/dashboard/admin/users"))
@@ -194,7 +308,7 @@ export default function AdminUserDetailPage() {
             {togglingAdmin ? "Updating..." : user.is_admin ? "Revoke Admin" : "Grant Admin"}
           </button>
 
-          {/* Delete */}
+          {/* Delete user */}
           <button
             onClick={handleDelete}
             disabled={deleting || isSelf}
@@ -206,45 +320,27 @@ export default function AdminUserDetailPage() {
         </div>
       </div>
 
-      {/* Jobs table */}
-      <h2 className="text-sm font-semibold text-white mb-3">Jobs ({user.jobs.length})</h2>
-      <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-        {user.jobs.length === 0 ? (
-          <p className="text-center text-gray-500 text-sm py-8">No jobs yet</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-700">
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Title / URL</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide hidden sm:table-cell">Clips</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide hidden md:table-cell">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {user.jobs.map((job) => (
-                <tr key={job.id} className="border-t border-gray-700">
-                  <td className="px-4 py-3 max-w-xs">
-                    <p className="text-white truncate">{job.video_title || job.source_url || `Job #${job.id.slice(-6)}`}</p>
-                    {job.source_url && job.video_title && (
-                      <p className="text-xs text-gray-600 truncate">{job.source_url}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_BADGE[job.status] ?? "bg-gray-700 text-gray-300"}`}>
-                      {job.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 hidden sm:table-cell">{job.clip_count}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">
-                    {new Date(job.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* Jobs section */}
+      <h2 className="text-sm font-semibold text-white mb-3">Jobs ({userJobs.length})</h2>
+      {userJobs.length === 0 ? (
+        <p className="text-center text-gray-500 text-sm py-8">No jobs yet</p>
+      ) : (
+        <div className="space-y-4">
+          {userJobs.map((job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              onRetry={(id) =>
+                setUserJobs((prev) =>
+                  prev.map((j) => (j.id === id ? { ...j, status: "queued" } : j))
+                )
+              }
+              onDelete={(id) => setUserJobs((prev) => prev.filter((j) => j.id !== id))}
+              onFlash={flash}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

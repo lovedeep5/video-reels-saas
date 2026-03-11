@@ -159,17 +159,57 @@ def _pipeline(job: dict, plan: dict):
         log(f"[downloader] Bot detection without cookies: {e}")
         # Lazy-fetch user cookies only when needed
         update_job(progress=8, progress_message="YouTube blocked — retrying with your cookies...")
+        admin_retry_user_id = job.get("admin_retry_user_id")
         user_cookie_path = _fetch_user_cookies(str(job["user_id"]))
         if user_cookie_path:
             try:
                 info = download_video(job["source_url"], TEMP_DIR, JOB_ID, cookie_file=user_cookie_path)
                 log("[downloader] Downloaded with user cookies")
             except BotDetectionError as e2:
-                jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {"error_type": "cookie_required"}})
-                fail_job(f"YouTube blocked the download even with your cookies. Try re-syncing your cookies via the Chrome extension. ({e2})")
-                return
+                log(f"[downloader] Bot detection with user cookies: {e2}")
+                if admin_retry_user_id:
+                    update_job(progress=10, progress_message="Retrying with admin cookies...")
+                    admin_cookie_path = _fetch_user_cookies(admin_retry_user_id)
+                    if admin_cookie_path:
+                        try:
+                            info = download_video(job["source_url"], TEMP_DIR, JOB_ID, cookie_file=admin_cookie_path)
+                            log("[downloader] Downloaded with admin cookies")
+                        except BotDetectionError as e3:
+                            jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {"error_type": "cookie_required"}})
+                            fail_job(f"YouTube blocked even with admin cookies. ({e3})")
+                            return
+                        except Exception as e3:
+                            fail_job(f"Download failed with admin cookies: {e3}")
+                            return
+                    else:
+                        jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {"error_type": "cookie_required"}})
+                        fail_job("YouTube blocked this download. No admin cookies available either.")
+                        return
+                else:
+                    jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {"error_type": "cookie_required"}})
+                    fail_job(f"YouTube blocked the download even with your cookies. Try re-syncing your cookies via the Chrome extension. ({e2})")
+                    return
             except Exception as e2:
                 fail_job(f"Download failed after cookie retry: {e2}")
+                return
+        elif admin_retry_user_id:
+            # No user cookies — try admin cookies directly
+            update_job(progress=10, progress_message="Retrying with admin cookies...")
+            admin_cookie_path = _fetch_user_cookies(admin_retry_user_id)
+            if admin_cookie_path:
+                try:
+                    info = download_video(job["source_url"], TEMP_DIR, JOB_ID, cookie_file=admin_cookie_path)
+                    log("[downloader] Downloaded with admin cookies")
+                except BotDetectionError as e3:
+                    jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {"error_type": "cookie_required"}})
+                    fail_job(f"YouTube blocked even with admin cookies. ({e3})")
+                    return
+                except Exception as e3:
+                    fail_job(f"Download failed with admin cookies: {e3}")
+                    return
+            else:
+                jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {"error_type": "cookie_required"}})
+                fail_job("YouTube blocked this download. No admin cookies available either.")
                 return
         else:
             # No cookies available — mobile user or never synced

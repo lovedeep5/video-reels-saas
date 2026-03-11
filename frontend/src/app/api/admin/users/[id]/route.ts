@@ -34,6 +34,7 @@ export async function GET(
     video_title: job.video_title,
     created_at: job.created_at,
     clip_count: (job.output_clips ?? []).length,
+    output_clips: job.output_clips ?? [],
     output_ratio: job.output_ratio,
   }));
 

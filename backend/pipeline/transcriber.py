@@ -126,9 +126,9 @@ def generate_ass(
     Uses proper PlayResX/Y so text stays within the output frame and wraps correctly.
     Timestamps are re-zeroed relative to start_offset.
     """
-    margin_h = max(40, int(out_w * 0.055))   # ~60px left/right on 1080w
-    margin_v = max(60, int(out_h * 0.045))   # ~86px from bottom on 1920h
-    font_size = max(38, int(out_w * 0.048))  # ~52px on 1080w — readable on phone
+    margin_h = max(50, int(out_w * 0.055))   # ~60px left/right on 1080w
+    margin_v = max(150, int(out_h * 0.10))   # ~192px from bottom on 1920h — clears in-app UI
+    font_size = max(58, int(out_w * 0.065))  # ~70px on 1080w — bold and readable on mobile
 
     header = (
         "[Script Info]\n"
@@ -143,8 +143,8 @@ def generate_ass(
         "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
         "Alignment, MarginL, MarginR, MarginV, Encoding\n"
         f"Style: Default,Arial,{font_size},"
-        "&H00FFFFFF,&H000000FF,&H00000000,&H80000000,"  # white text, black outline, semi-transparent bg
-        f"1,0,0,0,100,100,0,0,1,3,1,2,"                 # Bold=1, Outline=3, Shadow=1, Align=bottom-center
+        "&H00FFFFFF,&H000000FF,&H00000000,&HA0000000,"  # white text, black outline, semi-transparent shadow
+        f"1,0,0,0,100,100,1,0,1,4,2,2,"                 # Bold=1, Spacing=1, Outline=4, Shadow=2, Align=bottom-center
         f"{margin_h},{margin_h},{margin_v},1\n\n"
         "[Events]\n"
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"

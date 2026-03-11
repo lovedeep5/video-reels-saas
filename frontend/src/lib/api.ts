@@ -132,6 +132,7 @@ export const jobsApi = {
   get: (id: string) => api.get<Job>(`/jobs/${id}`),
   usage: () => api.get<Usage>("/jobs/usage"),
   deleteFailed: (id: string) => api.delete(`/jobs/${id}`),
+  deleteJob: (id: string) => api.delete(`/jobs/${id}`),
   retry: (id: string) => api.post(`/jobs/${id}/retry`),
   downloadUrl: (jobId: string, clipId: string | number) => `/api/jobs/${jobId}/clips/${clipId}/download`,
 };
