@@ -30,12 +30,13 @@ export async function GET(
   const s3Key = job.output_clips?.[clipIndex];
   if (!s3Key) return NextResponse.json({ error: "Clip not found" }, { status: 404 });
 
+  const inline = req.nextUrl.searchParams.get("inline") === "1";
   const url = await getSignedUrl(
     s3,
     new GetObjectCommand({
       Bucket: process.env.S3_BUCKET!,
       Key: s3Key,
-      ResponseContentDisposition: `attachment; filename="reel_${id}_clip${clipIndex + 1}.mp4"`,
+      ...(inline ? {} : { ResponseContentDisposition: `attachment; filename="reel_${id}_clip${clipIndex + 1}.mp4"` }),
     }),
     { expiresIn: 3600 }
   );
