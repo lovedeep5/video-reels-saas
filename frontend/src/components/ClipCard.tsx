@@ -202,7 +202,9 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
   const [publishedUrl, setPublishedUrl] = useState<string | null>(clip.youtube_url ?? null);
   const [isPaid, setIsPaid] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
+  // Video player state
+  const [playerUrl, setPlayerUrl] = useState<string | null>(null);
+  const [loadingPlayer, setLoadingPlayer] = useState(false);
 
   useEffect(() => {
     youtubeApi.status().then((r) => setYtStatus(r.data)).catch(() => {});
@@ -212,19 +214,39 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
     }).catch(() => {});
   }, []);
 
-  const streamUrl = `/api/jobs/${jobId}/clips/${clip.clip_index}/stream`;
+  async function getPresignedUrl(): Promise<string> {
+    const apiUrl = jobsApi.downloadUrl(jobId, clip.id);
+    const res = await fetch(apiUrl, { credentials: "include" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Server error ${res.status}`);
+    }
+    const { url } = await res.json();
+    return url;
+  }
+
+  async function handlePlay() {
+    if (playerUrl) {
+      setPlayerUrl(null);
+      return;
+    }
+    setLoadingPlayer(true);
+    setDownloadError("");
+    try {
+      const url = await getPresignedUrl();
+      setPlayerUrl(url);
+    } catch (e: unknown) {
+      setDownloadError((e as Error).message || "Failed to load video");
+    } finally {
+      setLoadingPlayer(false);
+    }
+  }
 
   async function handleDownload() {
     setDownloading(true);
     setDownloadError("");
     try {
-      const apiUrl = jobsApi.downloadUrl(jobId, clip.id);
-      const res = await fetch(apiUrl, { credentials: "include" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Server error ${res.status}`);
-      }
-      const { url } = await res.json();
+      const url = playerUrl ?? await getPresignedUrl();
       const a = document.createElement("a");
       a.href = url;
       a.download = `reel_clip_${clip.clip_index + 1}.mp4`;
@@ -259,25 +281,34 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
         {/* Video player area */}
         {clip.file_ready && (
           <div className="relative bg-black w-full h-52 overflow-hidden">
-            {showVideo ? (
+            {playerUrl ? (
               <video
-                src={streamUrl}
+                src={playerUrl}
                 controls
                 autoPlay
                 className="w-full h-full object-contain"
-                onError={() => { setShowVideo(false); setDownloadError("Video failed to load."); }}
+                onError={() => { setPlayerUrl(null); setDownloadError("Video failed to load."); }}
               />
             ) : (
+              /* Placeholder with play button */
               <button
-                onClick={() => setShowVideo(true)}
+                onClick={handlePlay}
+                disabled={loadingPlayer}
                 className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-white transition-colors group"
               >
-                <div className="w-14 h-14 rounded-full bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-colors">
-                  <svg className="w-7 h-7 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
+                {loadingPlayer ? (
+                  <svg className="w-12 h-12 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                   </svg>
-                </div>
-                <span className="text-xs">Preview</span>
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-colors">
+                    <svg className="w-7 h-7 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </div>
+                )}
+                <span className="text-xs">{loadingPlayer ? "Loading..." : "Preview"}</span>
               </button>
             )}
           </div>
