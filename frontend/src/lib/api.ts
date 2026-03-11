@@ -224,6 +224,6 @@ export const youtubeApi = {
   publish: (
     jobId: string,
     clipId: number,
-    data: { title: string; description: string; tags: string[]; visibility: string }
+    data: { title: string; description: string; tags: string[]; visibility: string; publishAt?: string }
   ) => api.post<YouTubePublishResult>(`/jobs/${jobId}/clips/${clipId}/publish-youtube`, data),
 };

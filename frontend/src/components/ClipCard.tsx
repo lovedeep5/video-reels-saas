@@ -33,15 +33,24 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
   const [description, setDescription] = useState(clip.yt_description ?? "");
   const [tags, setTags] = useState((clip.yt_tags ?? []).join(", "));
   const [visibility, setVisibility] = useState<"private" | "unlisted" | "public">("public");
+  const [publishMode, setPublishMode] = useState<"now" | "schedule">("now");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [publishing, setPublishing] = useState(false);
-  const [result, setResult] = useState<{ url: string } | null>(null);
+  const [result, setResult] = useState<{ url: string; scheduled?: string } | null>(null);
   const [error, setError] = useState("");
 
   const hasAiMeta = !!(clip.yt_title || clip.yt_description || clip.yt_tags?.length);
 
+  // Minimum datetime-local value: 10 minutes from now
+  const minSchedule = new Date(Date.now() + 10 * 60 * 1000).toISOString().slice(0, 16);
+
   async function handlePublish() {
     if (!title.trim()) {
       setError("Title is required.");
+      return;
+    }
+    if (publishMode === "schedule" && !scheduledAt) {
+      setError("Please select a date and time to schedule.");
       return;
     }
     setPublishing(true);
@@ -52,8 +61,12 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
         description: description.trim(),
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         visibility,
+        ...(publishMode === "schedule" ? { publishAt: new Date(scheduledAt).toISOString() } : {}),
       });
-      setResult({ url: res.data.youtube_url });
+      setResult({
+        url: res.data.youtube_url,
+        scheduled: publishMode === "schedule" ? scheduledAt : undefined,
+      });
     } catch (e: unknown) {
       const msg = (e as any)?.response?.data?.error || (e as Error).message || "Publish failed";
       setError(msg);
@@ -79,8 +92,17 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
         {result ? (
           /* Success state */
           <div className="p-6 text-center">
-            <div className="text-4xl mb-3">🎉</div>
-            <p className="text-white font-medium mb-1">Published successfully!</p>
+            <div className="text-4xl mb-3">{result.scheduled ? "🗓️" : "🎉"}</div>
+            {result.scheduled ? (
+              <>
+                <p className="text-white font-medium mb-1">Scheduled successfully!</p>
+                <p className="text-sm text-gray-400 mb-2">
+                  Will go public on {new Date(result.scheduled).toLocaleString()}
+                </p>
+              </>
+            ) : (
+              <p className="text-white font-medium mb-1">Published successfully!</p>
+            )}
             <a
               href={result.url}
               target="_blank"
@@ -152,25 +174,69 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
               />
             </div>
 
-            {/* Visibility */}
+            {/* When to publish toggle */}
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Visibility</label>
-              <select
-                value={visibility}
-                onChange={(e) => setVisibility(e.target.value as any)}
-                className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500"
-              >
-                <option value="private">Private (only you)</option>
-                <option value="unlisted">Unlisted (anyone with link)</option>
-                <option value="public">Public</option>
-              </select>
+              <label className="block text-xs text-gray-400 mb-2">When to publish</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPublishMode("now")}
+                  className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                    publishMode === "now"
+                      ? "bg-indigo-600 border-indigo-500 text-white"
+                      : "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Publish now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPublishMode("schedule")}
+                  className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                    publishMode === "schedule"
+                      ? "bg-indigo-600 border-indigo-500 text-white"
+                      : "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Schedule for later
+                </button>
+              </div>
             </div>
+
+            {/* Datetime picker — only when scheduling */}
+            {publishMode === "schedule" ? (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Publish date &amp; time</label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  min={minSchedule}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500 [color-scheme:dark]"
+                />
+                <p className="text-xs text-gray-500 mt-1">Video stays Private until this time, then YouTube auto-publishes it.</p>
+              </div>
+            ) : (
+              /* Visibility — only shown for publish-now */
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Visibility</label>
+                <select
+                  value={visibility}
+                  onChange={(e) => setVisibility(e.target.value as any)}
+                  className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="private">Private (only you)</option>
+                  <option value="unlisted">Unlisted (anyone with link)</option>
+                  <option value="public">Public</option>
+                </select>
+              </div>
+            )}
 
             {error && <p className="text-xs text-red-400">{error}</p>}
 
             <button
               onClick={handlePublish}
-              disabled={publishing || !title.trim()}
+              disabled={publishing || !title.trim() || (publishMode === "schedule" && !scheduledAt)}
               className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
             >
               {publishing ? (
@@ -179,10 +245,10 @@ function PublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                   </svg>
-                  Publishing... (may take a minute)
+                  {publishMode === "schedule" ? "Scheduling..." : "Publishing... (may take a minute)"}
                 </>
               ) : (
-                "Publish to YouTube"
+                publishMode === "schedule" ? "Schedule on YouTube" : "Publish to YouTube"
               )}
             </button>
           </div>

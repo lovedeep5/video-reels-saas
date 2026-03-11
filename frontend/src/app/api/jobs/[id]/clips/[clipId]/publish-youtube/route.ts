@@ -56,6 +56,19 @@ export async function POST(
     ? body.visibility
     : "private";
 
+  // Validate publishAt if provided — must be a valid date at least 5 min in the future
+  let publishAt: string | undefined;
+  if (body.publishAt) {
+    const scheduledDate = new Date(body.publishAt);
+    if (isNaN(scheduledDate.getTime())) {
+      return NextResponse.json({ error: "Invalid publishAt date" }, { status: 400 });
+    }
+    if (scheduledDate.getTime() < Date.now() + 5 * 60 * 1000) {
+      return NextResponse.json({ error: "Scheduled time must be at least 5 minutes in the future" }, { status: 400 });
+    }
+    publishAt = scheduledDate.toISOString();
+  }
+
   try {
     // Refresh access token
     const accessToken = await refreshAccessToken(user.youtube_refresh_token);
@@ -73,6 +86,7 @@ export async function POST(
       visibility,
       videoBuffer,
       tags,
+      publishAt,
     });
 
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -80,9 +94,14 @@ export async function POST(
     // Persist published info to clip metadata so the UI can show the link
     const updateKey = `output_clip_metadata.${clipIndex}.youtube_video_id`;
     const updateUrl = `output_clip_metadata.${clipIndex}.youtube_url`;
+    const updateScheduled = `output_clip_metadata.${clipIndex}.youtube_scheduled_at`;
     await jobs.updateOne(
       { _id: new ObjectId(id) },
-      { $set: { [updateKey]: videoId, [updateUrl]: youtubeUrl } }
+      { $set: {
+        [updateKey]: videoId,
+        [updateUrl]: youtubeUrl,
+        ...(publishAt ? { [updateScheduled]: publishAt } : {}),
+      }}
     );
 
     return NextResponse.json({

@@ -19,6 +19,8 @@ export interface YouTubeUploadOptions {
   visibility: "public" | "unlisted" | "private";
   videoBuffer: Buffer;
   tags?: string[];
+  /** RFC3339 timestamp. When set, privacyStatus is forced to "private" and YouTube auto-publishes at this time. */
+  publishAt?: string;
 }
 
 /** Exchange an auth code for access + refresh tokens. */
@@ -99,8 +101,9 @@ export async function uploadVideoToYouTube(
           tags: [...(opts.tags ?? []), "Shorts", "YouTubeShorts"],
         },
         status: {
-          privacyStatus: opts.visibility,
+          privacyStatus: opts.publishAt ? "private" : opts.visibility,
           selfDeclaredMadeForKids: false,
+          ...(opts.publishAt ? { publishAt: opts.publishAt } : {}),
         },
       }),
     }
