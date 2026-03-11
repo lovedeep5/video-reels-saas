@@ -10,10 +10,6 @@ const s3 = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
-  // SDK v3 >= 3.750 defaults to WHEN_SUPPORTED which injects x-amz-checksum-mode=ENABLED
-  // into presigned URLs — this can break browser video playback.
-  requestChecksumCalculation: "WHEN_REQUIRED",
-  responseChecksumValidation: "WHEN_REQUIRED",
 });
 
 export async function GET(

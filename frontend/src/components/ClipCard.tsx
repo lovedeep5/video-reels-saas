@@ -248,7 +248,7 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
     setDownloading(true);
     setDownloadError("");
     try {
-      const url = await getPresignedUrl(false);
+      const url = playerUrl ?? await getPresignedUrl(false);
       const a = document.createElement("a");
       a.href = url;
       a.download = `reel_clip_${clip.clip_index + 1}.mp4`;
