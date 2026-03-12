@@ -28,3 +28,41 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(userList);
 }
+
+// DELETE /api/admin/users — deduplicate users (remove race-condition duplicates)
+export async function DELETE(req: NextRequest) {
+  const adminOrRes = await requireAdmin(req);
+  if (adminOrRes instanceof NextResponse) return adminOrRes;
+
+  const users = await usersCol();
+
+  const dupes = await users
+    .aggregate<{ _id: string; count: number; docs: { id: any; created_at: Date }[] }>([
+      {
+        $group: {
+          _id: "$clerk_id",
+          count: { $sum: 1 },
+          docs: { $push: { id: "$_id", created_at: "$created_at" } },
+        },
+      },
+      { $match: { count: { $gt: 1 } } },
+    ])
+    .toArray();
+
+  let removed = 0;
+  for (const group of dupes) {
+    const sorted = group.docs.sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    // Keep the oldest, delete the rest
+    for (let i = 1; i < sorted.length; i++) {
+      await users.deleteOne({ _id: sorted[i].id });
+      removed++;
+    }
+  }
+
+  return NextResponse.json({
+    duplicated_clerk_ids: dupes.length,
+    removed_documents: removed,
+  });
+}

@@ -109,8 +109,16 @@ export interface DbPaymentEvent {
   created_at: Date;
 }
 
+let _indexesEnsured = false;
+
 export async function usersCol(): Promise<Collection<DbUser>> {
-  return (await getDb()).collection<DbUser>("users");
+  const col = (await getDb()).collection<DbUser>("users");
+  if (!_indexesEnsured) {
+    _indexesEnsured = true;
+    // Unique index prevents duplicate users from race conditions
+    col.createIndex({ clerk_id: 1 }, { unique: true, sparse: true }).catch(() => {});
+  }
+  return col;
 }
 
 export async function jobsCol(): Promise<Collection<DbJob>> {

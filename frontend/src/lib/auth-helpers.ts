@@ -87,16 +87,23 @@ export async function getOrCreateUser(clerkId: string): Promise<DbUser | null> {
       return users.findOne({ _id: byEmail._id });
     }
 
-    const newUser: DbUser = {
-      clerk_id: clerkId,
-      email,
-      name,
-      plan: "free",
-      is_active: true,
-      created_at: new Date(),
-    };
-    const result = await users.insertOne(newUser);
-    return { ...newUser, _id: result.insertedId };
+    // Use findOneAndUpdate with upsert to prevent race-condition duplicates
+    // when multiple API requests fire simultaneously for a new user
+    const result = await users.findOneAndUpdate(
+      { clerk_id: clerkId },
+      {
+        $setOnInsert: {
+          clerk_id: clerkId,
+          email,
+          name,
+          plan: "free",
+          is_active: true,
+          created_at: new Date(),
+        } as DbUser,
+      },
+      { upsert: true, returnDocument: "after" }
+    );
+    return result ?? null;
   } catch {
     return null;
   }
