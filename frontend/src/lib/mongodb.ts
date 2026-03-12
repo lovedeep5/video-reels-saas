@@ -67,7 +67,7 @@ export interface DbJob {
   _id?: ObjectId;
   user_id: ObjectId;
   status: "queued" | "starting" | "downloading" | "processing" | "rendering" | "completed" | "failed";
-  source_type: "url" | "upload";
+  source_type: "url" | "upload" | "faceless";
   source_url?: string;
   source_filename?: string;
   video_title?: string;
@@ -82,6 +82,11 @@ export interface DbJob {
   error_message?: string;
   retry_count: number;
   ec2_instance_id?: string;
+  // Faceless video fields
+  faceless_topic?: string;
+  faceless_style?: string;
+  faceless_voice?: string;
+  faceless_duration?: number;
   created_at: Date;
   started_at?: Date;
   completed_at?: Date;

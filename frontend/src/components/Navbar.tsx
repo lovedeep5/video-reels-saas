@@ -23,6 +23,7 @@ export default function Navbar() {
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard/upload", label: "New Video" },
+    { href: "/dashboard/faceless", label: "Faceless" },
     { href: "/dashboard/keys", label: "API Keys" },
     { href: "/billing", label: "Billing" },
     { href: "/dashboard/settings", label: "Settings" },

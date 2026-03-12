@@ -109,10 +109,13 @@ def run():
     os.environ["S3_BUCKET"]             = S3_BUCKET
     os.environ["OPENROUTER_API_KEY"]    = OPENROUTER_API_KEY
 
-    log(f"user={job.get('user_id')} plan={plan_key} clips_requested={job.get('clips_requested')} url={job.get('source_url','')[:80]}")
+    log(f"user={job.get('user_id')} plan={plan_key} source_type={job.get('source_type','url')} clips_requested={job.get('clips_requested')} url={job.get('source_url','')[:80]}")
 
     try:
-        _pipeline(job, plan)
+        if job.get("source_type") == "faceless":
+            _faceless_pipeline(job)
+        else:
+            _pipeline(job, plan)
     except Exception as e:
         fail_job(f"Unexpected error: {e}\n{traceback.format_exc()}")
         sys.exit(1)
@@ -134,6 +137,90 @@ def _fetch_user_cookies(user_id: str) -> str | None:
     except Exception as e:
         log(f"[cookies] No user cookies in S3 for user {user_id}: {e}")
         return None
+
+
+def _faceless_pipeline(job: dict):
+    """Generate a faceless video from scratch using AI (script + images + TTS + assembly)."""
+    from pipeline.faceless.script_gen import generate_script
+    from pipeline.faceless.tts_engine import generate_segment_audios
+    from pipeline.faceless.image_gen import generate_segment_images
+    from pipeline.faceless.assembler import assemble_video
+    import shutil
+
+    topic = job.get("faceless_topic", "An amazing fact about the world")
+    style = job.get("faceless_style", "ghibli")
+    voice = job.get("faceless_voice", "andrew")
+    duration = job.get("faceless_duration", 30)
+
+    work_dir = TEMP_DIR / JOB_ID
+    if work_dir.exists():
+        shutil.rmtree(work_dir)
+    work_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Generate script
+    update_job(status="processing", progress=5, progress_message="AI writing script...")
+    script = generate_script(topic=topic, duration_seconds=duration, style=style)
+    video_title = script.get("title", topic[:50])
+    jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {
+        "video_title": video_title,
+        "video_duration": duration,
+    }})
+
+    # 2. Generate TTS audio
+    update_job(progress=20, progress_message="Generating narration audio...")
+    audio_dir = str(work_dir / "audio")
+    audio_paths = generate_segment_audios(script["segments"], audio_dir, voice_name=voice)
+    log(f"[faceless] TTS done — {len(audio_paths)} audio files")
+
+    # 3. Generate AI images
+    update_job(progress=35, progress_message="Generating AI images...")
+    image_dir = str(work_dir / "images")
+    image_paths = generate_segment_images(script["segments"], image_dir)
+    log(f"[faceless] Images done — {len(image_paths)} images")
+
+    # 4. Assemble video
+    update_job(status="rendering", progress=70, progress_message="Assembling video...")
+    output_path = str(work_dir / "faceless_output.mp4")
+    assemble_video(
+        image_paths=image_paths,
+        audio_paths=audio_paths,
+        segments=script["segments"],
+        output_path=output_path,
+        title=video_title,
+    )
+    log(f"[faceless] Video assembled: {output_path}")
+
+    # 5. Upload to S3
+    update_job(progress=90, progress_message="Uploading to cloud...")
+    s3_key = f"users/{job['user_id']}/jobs/{JOB_ID}/clip_1.mp4"
+    if not upload_to_s3(output_path, s3_key):
+        fail_job("Failed to upload faceless video to S3")
+        return
+
+    # 6. Cleanup
+    try:
+        shutil.rmtree(work_dir)
+    except Exception:
+        pass
+
+    # 7. Complete
+    jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {
+        "status": "completed",
+        "progress": 100,
+        "progress_message": "Faceless video ready",
+        "output_clips": [s3_key],
+        "output_clip_metadata": [{
+            "clip_index": 0,
+            "s3_key": s3_key,
+            "start_time": 0,
+            "end_time": float(duration),
+            "duration": float(duration),
+            "importance_score": 1.0,
+            "transcript_excerpt": script["segments"][0]["text"] if script["segments"] else None,
+        }],
+        "completed_at": datetime.now(timezone.utc),
+    }})
+    log(f"====== Faceless job {JOB_ID} completed ======")
 
 
 def _pipeline(job: dict, plan: dict):

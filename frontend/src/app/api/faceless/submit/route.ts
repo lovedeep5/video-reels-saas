@@ -1,0 +1,97 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth-helpers";
+import { jobsCol } from "@/lib/mongodb";
+import { enqueueJob } from "@/lib/sqs";
+import { getPlan, BILLABLE_STATUSES } from "@/lib/plans";
+
+const VALID_STYLES = ["ghibli", "anime", "cartoon", "comic", "realistic", "watercolor"];
+const VALID_VOICES = ["jack", "emma", "andrew", "aria", "ryan", "sonia"];
+const VALID_DURATIONS = [10, 15, 30, 60];
+
+export async function POST(req: NextRequest) {
+  const user = await getCurrentUser(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json();
+  const {
+    topic,
+    style = "ghibli",
+    voice = "andrew",
+    duration = 30,
+    count = 1,
+  } = body;
+
+  // Validation
+  if (!topic || typeof topic !== "string" || topic.trim().length < 3) {
+    return NextResponse.json({ error: "Topic must be at least 3 characters" }, { status: 400 });
+  }
+  if (!VALID_STYLES.includes(style)) {
+    return NextResponse.json({ error: `Invalid style. Choose from: ${VALID_STYLES.join(", ")}` }, { status: 400 });
+  }
+  if (!VALID_VOICES.includes(voice)) {
+    return NextResponse.json({ error: `Invalid voice. Choose from: ${VALID_VOICES.join(", ")}` }, { status: 400 });
+  }
+  if (!VALID_DURATIONS.includes(duration)) {
+    return NextResponse.json({ error: `Invalid duration. Choose from: ${VALID_DURATIONS.join(", ")}` }, { status: 400 });
+  }
+
+  const videoCount = Math.min(Math.max(1, Number(count) || 1), 5);
+
+  // Plan limits — admins bypass
+  const plan = getPlan(user.plan);
+  if (!user.is_admin && plan.videos_per_month !== -1) {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const jobs = await jobsCol();
+    const used = await jobs.countDocuments({
+      user_id: user._id,
+      created_at: { $gte: startOfMonth },
+      status: { $in: [...BILLABLE_STATUSES] },
+    });
+
+    if (used + videoCount > plan.videos_per_month) {
+      return NextResponse.json(
+        {
+          error: `Monthly limit: ${used}/${plan.videos_per_month} used. Cannot create ${videoCount} more. Upgrade your plan.`,
+        },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Create jobs (one per video requested)
+  const jobs = await jobsCol();
+  const jobIds: string[] = [];
+
+  for (let i = 0; i < videoCount; i++) {
+    const result = await jobs.insertOne({
+      user_id: user._id!,
+      status: "queued",
+      source_type: "faceless",
+      clips_requested: 1,
+      output_ratio: "9:16",
+      faceless_topic: topic.trim(),
+      faceless_style: style,
+      faceless_voice: voice,
+      faceless_duration: duration,
+      progress: 0,
+      progress_message: "Queued",
+      retry_count: 0,
+      created_at: new Date(),
+    });
+
+    const jobId = result.insertedId.toHexString();
+    jobIds.push(jobId);
+    await enqueueJob(jobId);
+  }
+
+  return NextResponse.json(
+    {
+      job_ids: jobIds,
+      message: `${videoCount} faceless video${videoCount > 1 ? "s" : ""} queued`,
+    },
+    { status: 201 }
+  );
+}
