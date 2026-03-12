@@ -7,6 +7,8 @@ import { getPlan, BILLABLE_STATUSES } from "@/lib/plans";
 const VALID_STYLES = ["ghibli", "anime", "cartoon", "comic", "realistic", "watercolor"];
 const VALID_VOICES = ["jack", "emma", "andrew", "aria", "ryan", "sonia"];
 const VALID_DURATIONS = [10, 15, 30, 60];
+const VALID_MUSIC = ["none", "happy-rhythm", "suspenseful", "peaceful", "epic-cinematic", "mysterious", "energetic"];
+const VALID_TEXT_STYLES = ["bold-stroke", "red-highlight", "karaoke", "sleek", "beast", "elegant"];
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser(req);
@@ -18,6 +20,8 @@ export async function POST(req: NextRequest) {
     style = "ghibli",
     voice = "andrew",
     duration = 30,
+    music = "none",
+    text_style = "bold-stroke",
     count = 1,
   } = body;
 
@@ -33,6 +37,12 @@ export async function POST(req: NextRequest) {
   }
   if (!VALID_DURATIONS.includes(duration)) {
     return NextResponse.json({ error: `Invalid duration. Choose from: ${VALID_DURATIONS.join(", ")}` }, { status: 400 });
+  }
+  if (!VALID_MUSIC.includes(music)) {
+    return NextResponse.json({ error: `Invalid music. Choose from: ${VALID_MUSIC.join(", ")}` }, { status: 400 });
+  }
+  if (!VALID_TEXT_STYLES.includes(text_style)) {
+    return NextResponse.json({ error: `Invalid text style. Choose from: ${VALID_TEXT_STYLES.join(", ")}` }, { status: 400 });
   }
 
   const videoCount = Math.min(Math.max(1, Number(count) || 1), 5);
@@ -76,6 +86,8 @@ export async function POST(req: NextRequest) {
       faceless_style: style,
       faceless_voice: voice,
       faceless_duration: duration,
+      faceless_music: music,
+      faceless_text_style: text_style,
       progress: 0,
       progress_message: "Queued",
       retry_count: 0,

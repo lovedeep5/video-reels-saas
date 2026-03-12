@@ -87,6 +87,8 @@ export interface DbJob {
   faceless_style?: string;
   faceless_voice?: string;
   faceless_duration?: number;
+  faceless_music?: string;
+  faceless_text_style?: string;
   created_at: Date;
   started_at?: Date;
   completed_at?: Date;

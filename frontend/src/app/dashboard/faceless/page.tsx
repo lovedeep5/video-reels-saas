@@ -16,42 +16,12 @@ const CATEGORIES = [
 ];
 
 const STYLES = [
-  {
-    id: "ghibli", label: "Studio Ghibli",
-    desc: "Warm, hand-painted anime aesthetic",
-    gradient: "from-emerald-800 via-teal-700 to-sky-600",
-    preview: "🌿",
-  },
-  {
-    id: "anime", label: "Modern Anime",
-    desc: "Vibrant, crisp anime illustration",
-    gradient: "from-violet-700 via-fuchsia-600 to-pink-500",
-    preview: "⚡",
-  },
-  {
-    id: "cartoon", label: "Cartoon",
-    desc: "Bold, playful Pixar-inspired",
-    gradient: "from-amber-600 via-orange-500 to-red-500",
-    preview: "🎨",
-  },
-  {
-    id: "comic", label: "Comic Book",
-    desc: "Bold outlines, halftone dots",
-    gradient: "from-red-700 via-yellow-500 to-blue-600",
-    preview: "💥",
-  },
-  {
-    id: "realistic", label: "Cinematic",
-    desc: "Photorealistic, dramatic lighting",
-    gradient: "from-gray-900 via-slate-700 to-gray-500",
-    preview: "🎬",
-  },
-  {
-    id: "watercolor", label: "Watercolor",
-    desc: "Soft, dreamy brush strokes",
-    gradient: "from-rose-400 via-pink-300 to-purple-300",
-    preview: "🎭",
-  },
+  { id: "ghibli", label: "Studio Ghibli", desc: "Warm, hand-painted anime aesthetic", image: "/styles/ghibli.jpg" },
+  { id: "anime", label: "Modern Anime", desc: "Vibrant, crisp anime illustration", image: "/styles/anime.jpg" },
+  { id: "cartoon", label: "Cartoon", desc: "Bold, playful Pixar-inspired", image: "/styles/cartoon.jpg" },
+  { id: "comic", label: "Comic Book", desc: "Bold outlines, halftone dots", image: "/styles/comic.jpg" },
+  { id: "realistic", label: "Cinematic", desc: "Photorealistic, dramatic lighting", image: "/styles/realistic.jpg" },
+  { id: "watercolor", label: "Watercolor", desc: "Soft, dreamy brush strokes", image: "/styles/watercolor.jpg" },
 ];
 
 const VOICES = [
@@ -61,6 +31,25 @@ const VOICES = [
   { id: "aria", label: "Aria", desc: "Female · American · Expressive", file: "/voices/aria.mp3" },
   { id: "ryan", label: "Ryan", desc: "Male · British · Dramatic", file: "/voices/ryan.mp3" },
   { id: "sonia", label: "Sonia", desc: "Female · British · Elegant", file: "/voices/sonia.mp3" },
+];
+
+const MUSIC_TRACKS = [
+  { id: "none", label: "No Music", desc: "Voice only", color: "bg-gray-700" },
+  { id: "happy-rhythm", label: "Happy Rhythm", desc: "Upbeat and energetic, perfect for positive content", color: "bg-amber-500", file: "/music/happy-rhythm.mp3" },
+  { id: "suspenseful", label: "Quiet Before Storm", desc: "Building tension and anticipation for dramatic reveals", color: "bg-indigo-600", file: "/music/suspenseful.mp3" },
+  { id: "peaceful", label: "Peaceful Vibes", desc: "Calm and soothing background for relaxed storytelling", color: "bg-emerald-500", file: "/music/peaceful.mp3" },
+  { id: "epic-cinematic", label: "Epic Cinematic", desc: "Orchestral and majestic for epic storytelling", color: "bg-purple-600", file: "/music/epic-cinematic.mp3" },
+  { id: "mysterious", label: "Breathing Shadows", desc: "Mysterious and eerie ambiance for suspenseful videos", color: "bg-slate-600", file: "/music/mysterious.mp3" },
+  { id: "energetic", label: "High Energy", desc: "Fast-paced pulse for action-packed content", color: "bg-red-500", file: "/music/energetic.mp3" },
+];
+
+const TEXT_STYLES = [
+  { id: "bold-stroke", label: "Bold Stroke", desc: "Clean white text, thick black outline", preview: { color: "#fff", stroke: "#000", bg: false } },
+  { id: "red-highlight", label: "Red Highlight", desc: "White text on red highlighted background", preview: { color: "#fff", stroke: "none", bg: true, bgColor: "#dc2626" } },
+  { id: "karaoke", label: "Karaoke", desc: "Word-by-word highlight as narrator speaks", preview: { color: "#facc15", stroke: "#000", bg: false } },
+  { id: "sleek", label: "Sleek", desc: "Subtle gray text, minimal and modern", preview: { color: "#d1d5db", stroke: "none", bg: false } },
+  { id: "beast", label: "Beast", desc: "Large bold red text, impact style", preview: { color: "#ef4444", stroke: "#000", bg: false } },
+  { id: "elegant", label: "Elegant", desc: "Refined serif-style, warm gold tones", preview: { color: "#fbbf24", stroke: "#78350f", bg: false } },
 ];
 
 const DURATIONS = [
@@ -75,63 +64,47 @@ const DURATIONS = [
 export default function FacelessPage() {
   const router = useRouter();
 
-  // Form state
   const [category, setCategory] = useState("");
   const [topic, setTopic] = useState("");
   const [style, setStyle] = useState("ghibli");
   const [voice, setVoice] = useState("andrew");
+  const [music, setMusic] = useState("none");
+  const [textStyle, setTextStyle] = useState("bold-stroke");
   const [duration, setDuration] = useState(30);
   const [count, setCount] = useState(1);
 
-  // UI state
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Cleanup audio on unmount
   useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
+    return () => { audioRef.current?.pause(); };
   }, []);
 
   function handleCategoryClick(catId: string) {
     setCategory(catId);
     if (catId !== "custom") {
       const cat = CATEGORIES.find((c) => c.id === catId);
-      if (cat && cat.topics.length > 0) {
-        setTopic(cat.topics[Math.floor(Math.random() * cat.topics.length)]);
-      }
+      if (cat && cat.topics.length > 0) setTopic(cat.topics[Math.floor(Math.random() * cat.topics.length)]);
     } else {
       setTopic("");
     }
   }
 
-  function playVoice(voiceId: string, file: string) {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    if (playingVoice === voiceId) {
-      setPlayingVoice(null);
-      return;
-    }
+  function playAudio(id: string, file: string) {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (playingAudio === id) { setPlayingAudio(null); return; }
     const audio = new Audio(file);
-    audio.onended = () => setPlayingVoice(null);
+    audio.onended = () => setPlayingAudio(null);
     audio.play();
     audioRef.current = audio;
-    setPlayingVoice(voiceId);
+    setPlayingAudio(id);
   }
 
   async function handleSubmit() {
-    if (!topic.trim()) {
-      setError("Please enter a topic");
-      return;
-    }
+    if (!topic.trim()) { setError("Please enter a topic"); return; }
     setError("");
     setSubmitting(true);
     try {
@@ -139,16 +112,13 @@ export default function FacelessPage() {
         topic: topic.trim(),
         style,
         voice,
+        music,
+        text_style: textStyle,
         duration,
-        count,
+        count: 1, // Always 1 for now
       });
       const jobIds: string[] = res.data.job_ids;
-      // Navigate to the first job (or dashboard if multiple)
-      if (jobIds.length === 1) {
-        router.push(`/dashboard/jobs/${jobIds[0]}`);
-      } else {
-        router.push("/dashboard");
-      }
+      router.push(jobIds.length === 1 ? `/dashboard/jobs/${jobIds[0]}` : "/dashboard");
     } catch (e: any) {
       setError(e.response?.data?.error || "Failed to create video. Try again.");
       setSubmitting(false);
@@ -156,6 +126,25 @@ export default function FacelessPage() {
   }
 
   const selectedCat = CATEGORIES.find((c) => c.id === category);
+
+  /* Play/pause button SVG */
+  const PlayBtn = ({ id, file }: { id: string; file: string }) => (
+    <button
+      onClick={(e) => { e.stopPropagation(); playAudio(id, file); }}
+      className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors flex-shrink-0"
+    >
+      {playingAudio === id ? (
+        <svg className="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24">
+          <rect x="6" y="5" width="4" height="14" rx="1" />
+          <rect x="14" y="5" width="4" height="14" rx="1" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5 text-gray-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      )}
+    </button>
+  );
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
@@ -167,16 +156,12 @@ export default function FacelessPage() {
       </div>
 
       {error && (
-        <div className="mb-6 px-4 py-3 rounded-lg bg-red-900/50 border border-red-800 text-red-300 text-sm">
-          {error}
-        </div>
+        <div className="mb-6 px-4 py-3 rounded-lg bg-red-900/50 border border-red-800 text-red-300 text-sm">{error}</div>
       )}
 
-      {/* ── Step 1: Category ──────────────────────────────────────────────── */}
+      {/* ── 1. Category ───────────────────────────────────────────────────── */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
-          1. Pick a Category
-        </h2>
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">1. Pick a Category</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {CATEGORIES.map((cat) => (
             <button
@@ -193,8 +178,6 @@ export default function FacelessPage() {
             </button>
           ))}
         </div>
-
-        {/* Topic suggestions */}
         {selectedCat && selectedCat.topics.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {selectedCat.topics.map((t) => (
@@ -202,9 +185,7 @@ export default function FacelessPage() {
                 key={t}
                 onClick={() => setTopic(t)}
                 className={`text-xs px-3 py-1.5 rounded-full transition-all ${
-                  topic === t
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
+                  topic === t ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
                 }`}
               >
                 {t}
@@ -212,8 +193,6 @@ export default function FacelessPage() {
             ))}
           </div>
         )}
-
-        {/* Topic input */}
         <input
           type="text"
           value={topic}
@@ -223,25 +202,20 @@ export default function FacelessPage() {
         />
       </section>
 
-      {/* ── Step 2: Style ─────────────────────────────────────────────────── */}
+      {/* ── 2. Visual Style ───────────────────────────────────────────────── */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
-          2. Choose Visual Style
-        </h2>
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">2. Visual Style</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {STYLES.map((s) => (
             <button
               key={s.id}
               onClick={() => setStyle(s.id)}
               className={`relative overflow-hidden rounded-xl border-2 transition-all ${
-                style === s.id
-                  ? "border-indigo-500 ring-2 ring-indigo-500/30"
-                  : "border-gray-800 hover:border-gray-600"
+                style === s.id ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-gray-800 hover:border-gray-600"
               }`}
             >
-              {/* Gradient preview */}
-              <div className={`h-24 bg-gradient-to-br ${s.gradient} flex items-center justify-center`}>
-                <span className="text-4xl drop-shadow-lg">{s.preview}</span>
+              <div className="h-32 overflow-hidden">
+                <img src={s.image} alt={s.label} className="w-full h-full object-cover" />
               </div>
               <div className="p-3 bg-gray-900">
                 <p className="text-sm font-semibold text-white">{s.label}</p>
@@ -259,50 +233,54 @@ export default function FacelessPage() {
         </div>
       </section>
 
-      {/* ── Step 3: Voice ─────────────────────────────────────────────────── */}
+      {/* ── 3. Voice ──────────────────────────────────────────────────────── */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
-          3. Select Voice
-        </h2>
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">3. Voice</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {VOICES.map((v) => (
             <div
               key={v.id}
               onClick={() => setVoice(v.id)}
               className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${
-                voice === v.id
-                  ? "border-indigo-500 bg-indigo-950/30"
-                  : "border-gray-800 bg-gray-900 hover:border-gray-600"
+                voice === v.id ? "border-indigo-500 bg-indigo-950/30" : "border-gray-800 bg-gray-900 hover:border-gray-600"
               }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-white">{v.label}</span>
-                {/* Play button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    playVoice(v.id, v.file);
-                  }}
-                  className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors"
-                  title={`Play ${v.label}'s voice`}
-                >
-                  {playingVoice === v.id ? (
-                    <svg className="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24">
-                      <rect x="6" y="5" width="4" height="14" rx="1" />
-                      <rect x="14" y="5" width="4" height="14" rx="1" />
-                    </svg>
-                  ) : (
-                    <svg className="w-3.5 h-3.5 text-gray-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  )}
-                </button>
+                <PlayBtn id={`voice-${v.id}`} file={v.file} />
               </div>
               <p className="text-xs text-gray-500">{v.desc}</p>
-              {voice === v.id && (
-                <div className="mt-2 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                  <span className="text-xs text-indigo-400">Selected</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 4. Background Music ───────────────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+          4. Background Music <span className="text-gray-600 normal-case font-normal">Optional</span>
+        </h2>
+        <div className="space-y-2">
+          {MUSIC_TRACKS.map((m) => (
+            <div
+              key={m.id}
+              onClick={() => setMusic(m.id)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
+                music === m.id ? "border-indigo-500 bg-indigo-950/20" : "border-gray-800 bg-gray-900 hover:border-gray-600"
+              }`}
+            >
+              {/* Color swatch */}
+              <div className={`w-10 h-10 rounded-lg ${m.color} flex-shrink-0`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white">{m.label}</p>
+                <p className="text-xs text-gray-500 truncate">{m.desc}</p>
+              </div>
+              {m.file && <PlayBtn id={`music-${m.id}`} file={m.file} />}
+              {music === m.id && (
+                <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
               )}
             </div>
@@ -310,13 +288,54 @@ export default function FacelessPage() {
         </div>
       </section>
 
-      {/* ── Step 4: Duration & Count ──────────────────────────────────────── */}
+      {/* ── 5. Text / Subtitle Style ──────────────────────────────────────── */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
-          4. Duration & Quantity
-        </h2>
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">5. Text Style</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {TEXT_STYLES.map((ts) => (
+            <button
+              key={ts.id}
+              onClick={() => setTextStyle(ts.id)}
+              className={`rounded-xl border-2 overflow-hidden transition-all ${
+                textStyle === ts.id ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-gray-800 hover:border-gray-600"
+              }`}
+            >
+              {/* Preview bar */}
+              <div className="h-16 bg-gray-800 flex items-center justify-center relative">
+                {ts.preview.bg && (
+                  <span
+                    className="px-3 py-1 rounded text-sm font-bold"
+                    style={{ backgroundColor: ts.preview.bgColor, color: ts.preview.color }}
+                  >
+                    SAMPLE
+                  </span>
+                )}
+                {!ts.preview.bg && (
+                  <span
+                    className="text-sm font-bold"
+                    style={{
+                      color: ts.preview.color,
+                      WebkitTextStroke: ts.preview.stroke !== "none" ? `2px ${ts.preview.stroke}` : undefined,
+                      paintOrder: "stroke fill",
+                    }}
+                  >
+                    SAMPLE TEXT
+                  </span>
+                )}
+              </div>
+              <div className="p-2.5 bg-gray-900">
+                <p className="text-xs font-semibold text-white">{ts.label}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{ts.desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 6. Duration & Count ───────────────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">6. Duration & Quantity</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Duration */}
           <div>
             <label className="text-xs text-gray-400 mb-2 block">Video Duration</label>
             <div className="flex gap-2">
@@ -336,19 +355,22 @@ export default function FacelessPage() {
               ))}
             </div>
           </div>
-
-          {/* Count */}
           <div>
-            <label className="text-xs text-gray-400 mb-2 block">How many videos?</label>
+            <label className="text-xs text-gray-400 mb-2 block">
+              How many videos? <span className="text-gray-600">(coming soon)</span>
+            </label>
             <div className="flex gap-2">
               {[1, 2, 3, 5].map((n) => (
                 <button
                   key={n}
-                  onClick={() => setCount(n)}
+                  disabled={n > 1}
+                  onClick={() => n === 1 && setCount(n)}
                   className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all border ${
                     count === n
                       ? "bg-indigo-900/60 border-indigo-500 text-white"
-                      : "bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-600"
+                      : n > 1
+                        ? "bg-gray-900/50 border-gray-800 text-gray-600 cursor-not-allowed"
+                        : "bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-600"
                   }`}
                 >
                   {n}
@@ -375,10 +397,10 @@ export default function FacelessPage() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            Creating {count > 1 ? `${count} videos` : "video"}...
+            Creating video...
           </span>
         ) : (
-          `Generate ${count > 1 ? `${count} Videos` : "Video"}`
+          "Generate Video"
         )}
       </button>
 
