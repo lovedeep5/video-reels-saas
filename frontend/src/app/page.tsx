@@ -320,7 +320,7 @@ export default function LandingPage() {
                 "AI-generated YouTube titles & descriptions",
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2.5 text-gray-300">
-                  <span className="text-red-400 mt-0.5 shrink-0">\u2713</span>
+                  <span className="text-red-400 mt-0.5 shrink-0">✓</span>
                   {f}
                 </li>
               ))}
@@ -352,7 +352,7 @@ export default function LandingPage() {
                 "10s to 60s video duration",
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2.5 text-gray-300">
-                  <span className="text-purple-400 mt-0.5 shrink-0">\u2713</span>
+                  <span className="text-purple-400 mt-0.5 shrink-0">✓</span>
                   {f}
                 </li>
               ))}
@@ -528,7 +528,7 @@ export default function LandingPage() {
                 "Full REST API with code examples in Python, curl, and more",
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2">
-                  <span className="text-indigo-400 mt-0.5 shrink-0">\u2713</span>
+                  <span className="text-indigo-400 mt-0.5 shrink-0">✓</span>
                   {f}
                 </li>
               ))}
@@ -647,7 +647,7 @@ curl -X POST https://vidtoreels.com/api/faceless/submit \\
                 <ul className="space-y-2.5 text-sm text-gray-300 mb-6">
                   {features.map((f) => (
                     <li key={f} className="flex items-center gap-2">
-                      <span className="text-green-400 text-xs">\u2713</span>
+                      <span className="text-green-400 text-xs">✓</span>
                       {f}
                     </li>
                   ))}
