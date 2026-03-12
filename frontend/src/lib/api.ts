@@ -214,6 +214,23 @@ export const cookiesApi = {
     }>("/cookies/status"),
 };
 
+// ── Faceless Videos ───────────────────────────────────────────────────────
+
+export interface FacelessSubmitParams {
+  topic: string;
+  style?: string;
+  voice?: string;
+  duration?: number;
+  music?: string;
+  text_style?: string;
+  count?: number;
+}
+
+export const facelessApi = {
+  submit: (params: FacelessSubmitParams) =>
+    api.post<{ job_ids: string[]; message: string }>("/faceless/submit", params),
+};
+
 export const youtubeApi = {
   status: () => api.get<YouTubeStatus>("/youtube/status"),
   disconnect: () => api.post("/youtube/disconnect"),

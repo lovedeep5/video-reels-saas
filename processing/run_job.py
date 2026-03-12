@@ -191,19 +191,41 @@ def _faceless_pipeline(job: dict):
     log(f"[faceless] Video assembled: {output_path}")
 
     # 5. Upload to S3
-    update_job(progress=90, progress_message="Uploading to cloud...")
+    update_job(progress=85, progress_message="Uploading to cloud...")
     s3_key = f"users/{job['user_id']}/jobs/{JOB_ID}/clip_1.mp4"
     if not upload_to_s3(output_path, s3_key):
         fail_job("Failed to upload faceless video to S3")
         return
 
-    # 6. Cleanup
+    # 6. Generate YouTube metadata from the script
+    full_transcript = " ".join(seg["text"] for seg in script["segments"])
+    yt_title = None
+    yt_description = None
+    yt_tags = []
+    if OPENROUTER_API_KEY:
+        update_job(progress=92, progress_message="Generating YouTube metadata...")
+        try:
+            from pipeline.llm_scorer import generate_clip_metadata
+            meta = generate_clip_metadata(
+                transcript=full_transcript,
+                video_title=video_title,
+                clip_index=0,
+                api_key=OPENROUTER_API_KEY,
+            )
+            yt_title = meta.get("yt_title") or None
+            yt_description = meta.get("yt_description") or None
+            yt_tags = meta.get("yt_tags") or []
+            log(f"[faceless] YT metadata: title={yt_title[:60] if yt_title else 'none'}")
+        except Exception as e:
+            log(f"[faceless] YT metadata generation failed (non-fatal): {e}")
+
+    # 7. Cleanup
     try:
         shutil.rmtree(work_dir)
     except Exception:
         pass
 
-    # 7. Complete
+    # 8. Complete
     jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {
         "status": "completed",
         "progress": 100,
@@ -216,7 +238,10 @@ def _faceless_pipeline(job: dict):
             "end_time": float(duration),
             "duration": float(duration),
             "importance_score": 1.0,
-            "transcript_excerpt": script["segments"][0]["text"] if script["segments"] else None,
+            "transcript_excerpt": full_transcript[:500] if full_transcript else None,
+            "yt_title": yt_title,
+            "yt_description": yt_description,
+            "yt_tags": yt_tags,
         }],
         "completed_at": datetime.now(timezone.utc),
     }})

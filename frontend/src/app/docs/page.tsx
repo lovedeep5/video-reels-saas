@@ -136,6 +136,7 @@ const NAV = [
     label: "Endpoints",
     children: [
       { id: "submit-job",     label: "Submit Job" },
+      { id: "submit-faceless", label: "Create Faceless Video" },
       { id: "list-jobs",      label: "List Jobs" },
       { id: "get-job",        label: "Get Job" },
       { id: "download-clip",  label: "Download Clip" },
@@ -244,9 +245,9 @@ export default function DocsPage() {
           <Section id="overview">
             <H2>Overview</H2>
             <P>
-              The VidToReels API lets you submit YouTube videos for processing, monitor job status,
-              and download the resulting short-form vertical clips — all programmatically.
-              Use it to integrate AI clip generation into your own apps, automation workflows (n8n, Zapier, Make), or scripts.
+              The VidToReels API lets you submit YouTube videos for clip extraction, create AI faceless videos from a topic,
+              monitor job status, and download the results — all programmatically.
+              Use it to integrate AI video generation into your own apps, automation workflows (n8n, Zapier, Make), or scripts.
             </P>
             <div className="grid sm:grid-cols-2 gap-4 my-6">
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
@@ -441,6 +442,92 @@ curl -X POST https://vidtoreels.com/api/videos/submit-url \\
               Submitting a job counts against your monthly video limit immediately, even if the job
               later fails. See <a href="#rate-limits" className="underline">Plan Limits</a>.
             </Callout>
+          </Section>
+
+          {/* Create Faceless Video */}
+          <Section id="submit-faceless">
+            <H2>Create Faceless Video</H2>
+            <div className="flex items-center gap-3 mb-4">
+              <Method m="POST" />
+              <code className="text-sm font-mono text-gray-200">/api/faceless/submit</code>
+            </div>
+            <P>
+              Generate an AI-powered faceless video from scratch. Provide a topic and the AI writes a script,
+              generates images, adds voiceover and background music, and assembles a complete vertical video.
+            </P>
+
+            <H3>Request body</H3>
+            <ParamTable>
+              <ParamRow name="topic" type="string" required desc="The topic or story for the video. At least 3 characters. e.g. &quot;5 amazing facts about black holes&quot;" />
+              <ParamRow name="style" type="string" desc={`Visual style for AI-generated images. One of: "ghibli" (default), "anime", "cartoon", "comic", "realistic", "watercolor".`} />
+              <ParamRow name="voice" type="string" desc={`Narrator voice. One of: "andrew" (default), "jack", "emma", "aria", "ryan", "sonia".`} />
+              <ParamRow name="duration" type="integer" desc="Target video duration in seconds. One of: 10, 15, 30 (default), 60." />
+              <ParamRow name="music" type="string" desc={`Background music track. One of: "none" (default), "happy-rhythm", "suspenseful", "peaceful", "epic-cinematic", "mysterious", "energetic".`} />
+              <ParamRow name="text_style" type="string" desc={`Subtitle/text style. One of: "bold-stroke" (default), "red-highlight", "karaoke", "sleek", "beast", "elegant".`} />
+            </ParamTable>
+
+            <H3>Example request</H3>
+            <Code lang="bash">{`
+curl -X POST https://vidtoreels.com/api/faceless/submit \\
+  -H "X-API-Key: vr_live_xxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "topic": "5 terrifying deep sea creatures",
+    "style": "realistic",
+    "voice": "emma",
+    "duration": 30,
+    "music": "suspenseful"
+  }'
+            `}</Code>
+
+            <H3>Response</H3>
+            <Code lang="json">{`
+{
+  "job_ids": ["6641a2f3c4e1b90012345678"],
+  "message": "1 faceless video queued"
+}
+            `}</Code>
+
+            <Callout type="tip">
+              Faceless videos appear in the same job list as YouTube clips. Use the{" "}
+              <a href="#get-job" className="underline">Get Job</a> endpoint to poll for completion,
+              then <a href="#download-clip" className="underline">Download Clip</a> (clip index 0) to get the video.
+            </Callout>
+
+            <H3>Full example in Python</H3>
+            <Code lang="python">{`
+import time, requests
+
+API_KEY = "vr_live_xxxxxxxx"
+BASE    = "https://vidtoreels.com/api"
+headers = {"X-API-Key": API_KEY}
+
+# 1. Create faceless video
+resp = requests.post(f"{BASE}/faceless/submit", headers=headers, json={
+    "topic": "The mystery of the Bermuda Triangle",
+    "style": "cinematic",
+    "voice": "andrew",
+    "duration": 60,
+    "music": "mysterious",
+})
+job_id = resp.json()["job_ids"][0]
+print(f"Job created: {job_id}")
+
+# 2. Poll until done
+while True:
+    job = requests.get(f"{BASE}/jobs/{job_id}", headers=headers).json()
+    print(f"  {job['status']} — {job['progress']}%")
+    if job["status"] in ("completed", "failed"):
+        break
+    time.sleep(15)
+
+# 3. Download the video
+if job["status"] == "completed":
+    dl = requests.get(f"{BASE}/jobs/{job_id}/clips/0/download", headers=headers).json()
+    data = requests.get(dl["url"]).content
+    open("faceless_video.mp4", "wb").write(data)
+    print("Saved faceless_video.mp4")
+            `}</Code>
           </Section>
 
           {/* List Jobs */}
