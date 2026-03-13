@@ -151,8 +151,23 @@ export async function publishReel(
   }
 
   const mediaId: string = publishData.id;
+
+  // Step 4: fetch the actual permalink (media ID ≠ URL slug)
+  let permalink = `https://www.instagram.com/reel/${mediaId}/`;
+  try {
+    const permaRes = await fetch(
+      `${GRAPH_BASE}/${API_VERSION}/${mediaId}?fields=permalink&access_token=${encodeURIComponent(token)}`
+    );
+    const permaData = await permaRes.json();
+    if (permaData.permalink) {
+      permalink = permaData.permalink;
+    }
+  } catch {
+    // fallback to constructed URL if permalink fetch fails
+  }
+
   return {
     instagram_media_id: mediaId,
-    instagram_url: `https://www.instagram.com/reel/${mediaId}/`,
+    instagram_url: permalink,
   };
 }
