@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   // Instagram Login flow (2025+) — uses api.instagram.com, NOT facebook.com
   const oauthUrl = new URL("https://www.instagram.com/oauth/authorize");
-  oauthUrl.searchParams.set("client_id", process.env.INSTAGRAM_APP_ID);
+  oauthUrl.searchParams.set("client_id", process.env.INSTAGRAM_APP_ID.trim());
   oauthUrl.searchParams.set("redirect_uri", redirectUri);
   oauthUrl.searchParams.set("scope", SCOPES);
   oauthUrl.searchParams.set("state", state);

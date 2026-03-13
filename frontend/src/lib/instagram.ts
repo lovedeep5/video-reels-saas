@@ -24,8 +24,8 @@ export async function exchangeCodeForLongLivedToken(code: string): Promise<strin
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env.INSTAGRAM_APP_ID!,
-      client_secret: process.env.INSTAGRAM_APP_SECRET!,
+      client_id: process.env.INSTAGRAM_APP_ID!.trim(),
+      client_secret: process.env.INSTAGRAM_APP_SECRET!.trim(),
       grant_type: "authorization_code",
       redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL!.trim()}/api/instagram/callback`,
       code,
