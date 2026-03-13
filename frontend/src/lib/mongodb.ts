@@ -33,6 +33,19 @@ export async function getDb(): Promise<Db> {
 
 // ── Collection types ──────────────────────────────────────────────────────────
 
+export interface ConnectedChannel {
+  id: string;                       // unique ID (ObjectId hex)
+  platform: "youtube" | "instagram";
+  platform_account_id: string;      // YouTube channel_id or IG user_id
+  account_name: string;             // channel title or @username
+  access_token?: string;            // Instagram long-lived token
+  refresh_token?: string;           // YouTube refresh token
+  token_updated_at?: Date;
+  connected_at: Date;
+}
+
+export const MAX_CHANNELS = 5;
+
 export interface DbUser {
   _id?: ObjectId;
   clerk_id: string;
@@ -46,14 +59,15 @@ export interface DbUser {
   is_active: boolean;
   is_admin?: boolean;
   created_at: Date;
-  // YouTube OAuth (optional — only set when user connects their channel)
+  // Multi-channel support (up to 5)
+  connected_channels?: ConnectedChannel[];
+  // Legacy single-channel fields (kept for backward compat — migrated on read)
   youtube_refresh_token?: string;
   youtube_channel?: {
     channel_id: string;
     channel_title: string;
     connected_at: Date;
   };
-  // Instagram OAuth (optional — long-lived token, 60 days)
   instagram_access_token?: string;
   instagram_token_updated_at?: Date;
   instagram_account?: {
@@ -61,6 +75,48 @@ export interface DbUser {
     username: string;
     connected_at: Date;
   };
+}
+
+/** Get all connected channels, migrating legacy single-channel fields into the array. */
+export function getChannels(user: DbUser): ConnectedChannel[] {
+  const channels: ConnectedChannel[] = [...(user.connected_channels ?? [])];
+
+  // Migrate legacy YouTube if not already in array
+  if (user.youtube_refresh_token && user.youtube_channel) {
+    const exists = channels.some(
+      (c) => c.platform === "youtube" && c.platform_account_id === user.youtube_channel!.channel_id
+    );
+    if (!exists) {
+      channels.push({
+        id: "legacy_yt",
+        platform: "youtube",
+        platform_account_id: user.youtube_channel.channel_id,
+        account_name: user.youtube_channel.channel_title,
+        refresh_token: user.youtube_refresh_token,
+        connected_at: user.youtube_channel.connected_at,
+      });
+    }
+  }
+
+  // Migrate legacy Instagram if not already in array
+  if (user.instagram_access_token && user.instagram_account) {
+    const exists = channels.some(
+      (c) => c.platform === "instagram" && c.platform_account_id === user.instagram_account!.ig_user_id
+    );
+    if (!exists) {
+      channels.push({
+        id: "legacy_ig",
+        platform: "instagram",
+        platform_account_id: user.instagram_account.ig_user_id,
+        account_name: user.instagram_account.username,
+        access_token: user.instagram_access_token,
+        token_updated_at: user.instagram_token_updated_at,
+        connected_at: user.instagram_account.connected_at,
+      });
+    }
+  }
+
+  return channels;
 }
 
 export interface DbJob {

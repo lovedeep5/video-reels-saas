@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { jobsCol, ObjectId } from "@/lib/mongodb";
-import { usersCol } from "@/lib/mongodb";
+import { jobsCol, ObjectId, usersCol, getChannels } from "@/lib/mongodb";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { refreshToken, publishReel } from "@/lib/instagram";
@@ -21,19 +20,10 @@ export async function POST(
   const user = await getCurrentUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Plan check
   if (user.plan === "free" && !user.is_admin) {
     return NextResponse.json(
       { error: "Instagram publishing requires a Pro or Business plan." },
       { status: 403 }
-    );
-  }
-
-  // Instagram connected check
-  if (!user.instagram_account?.ig_user_id || !user.instagram_access_token) {
-    return NextResponse.json(
-      { error: "Instagram account not connected. Go to Settings to connect." },
-      { status: 400 }
     );
   }
 
@@ -47,6 +37,27 @@ export async function POST(
 
   const body = await req.json().catch(() => ({}));
   const caption: string = (body.caption ?? "").slice(0, 2200);
+  const channelId: string | undefined = body.channel_id;
+
+  // Find the Instagram channel to publish to
+  const channels = getChannels(user);
+  const igChannels = channels.filter((c) => c.platform === "instagram");
+
+  if (igChannels.length === 0) {
+    return NextResponse.json(
+      { error: "Instagram account not connected. Go to Settings to connect." },
+      { status: 400 }
+    );
+  }
+
+  // Use specified channel or first Instagram channel
+  const channel = channelId
+    ? igChannels.find((c) => c.id === channelId)
+    : igChannels[0];
+
+  if (!channel || !channel.access_token) {
+    return NextResponse.json({ error: "Instagram channel not found" }, { status: 400 });
+  }
 
   // Fetch job
   const jobs = await jobsCol();
@@ -67,16 +78,23 @@ export async function POST(
 
   try {
     // Refresh the token (resets 60-day window)
-    const freshToken = await refreshToken(user.instagram_access_token);
+    const freshToken = await refreshToken(channel.access_token);
 
     // Persist refreshed token
     const users = await usersCol();
-    await users.updateOne(
-      { _id: user._id },
-      { $set: { instagram_access_token: freshToken, instagram_token_updated_at: new Date() } }
-    );
+    if (channel.id === "legacy_ig") {
+      await users.updateOne(
+        { _id: user._id },
+        { $set: { instagram_access_token: freshToken, instagram_token_updated_at: new Date() } }
+      );
+    } else {
+      await users.updateOne(
+        { _id: user._id, "connected_channels.id": channel.id },
+        { $set: { "connected_channels.$.access_token": freshToken, "connected_channels.$.token_updated_at": new Date() } }
+      );
+    }
 
-    // Generate pre-signed S3 URL (10 min) — no ResponseContentDisposition header
+    // Generate pre-signed S3 URL (10 min)
     const videoUrl = await getSignedUrl(
       s3,
       new GetObjectCommand({ Bucket: process.env.S3_BUCKET!, Key: s3Key }),
@@ -86,7 +104,8 @@ export async function POST(
     // Publish reel
     const result = await publishReel(
       freshToken,
-      user.instagram_account.ig_user_id,
+      channel.platform_account_id,
+      channel.account_name,
       videoUrl,
       caption
     );

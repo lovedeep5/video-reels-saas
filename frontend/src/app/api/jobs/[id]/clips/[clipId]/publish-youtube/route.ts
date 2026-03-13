@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { jobsCol, ObjectId } from "@/lib/mongodb";
+import { jobsCol, ObjectId, getChannels } from "@/lib/mongodb";
 import { refreshAccessToken, uploadVideoToYouTube } from "@/lib/youtube";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
@@ -28,15 +28,14 @@ export async function POST(
     return NextResponse.json({ error: "YouTube publishing is available on Pro and Business plans" }, { status: 403 });
   }
 
-  if (!user.youtube_refresh_token) {
-    return NextResponse.json({ error: "YouTube not connected" }, { status: 400 });
-  }
-
   const { id, clipId } = await params;
   if (!ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid job id" }, { status: 400 });
 
   const jobs = await jobsCol();
-  const job = await jobs.findOne({ _id: new ObjectId(id), user_id: user._id });
+  const jobFilter = user.is_admin
+    ? { _id: new ObjectId(id) }
+    : { _id: new ObjectId(id), user_id: user._id };
+  const job = await jobs.findOne(jobFilter);
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
   if (job.status !== "completed") {
     return NextResponse.json({ error: "Job is not completed yet" }, { status: 400 });
@@ -55,8 +54,25 @@ export async function POST(
   const visibility: "public" | "unlisted" | "private" = ["public", "unlisted", "private"].includes(body.visibility)
     ? body.visibility
     : "private";
+  const channelId: string | undefined = body.channel_id;
 
-  // Validate publishAt if provided — must be a valid date at least 5 min in the future
+  // Find the YouTube channel to publish to
+  const channels = getChannels(user);
+  const ytChannels = channels.filter((c) => c.platform === "youtube");
+
+  if (ytChannels.length === 0) {
+    return NextResponse.json({ error: "YouTube not connected" }, { status: 400 });
+  }
+
+  const channel = channelId
+    ? ytChannels.find((c) => c.id === channelId)
+    : ytChannels[0];
+
+  if (!channel || !channel.refresh_token) {
+    return NextResponse.json({ error: "YouTube channel not found" }, { status: 400 });
+  }
+
+  // Validate publishAt
   let publishAt: string | undefined;
   if (body.publishAt) {
     const scheduledDate = new Date(body.publishAt);
@@ -70,16 +86,13 @@ export async function POST(
   }
 
   try {
-    // Refresh access token
-    const accessToken = await refreshAccessToken(user.youtube_refresh_token);
+    const accessToken = await refreshAccessToken(channel.refresh_token);
 
-    // Download clip from S3
     const s3Res = await s3.send(
       new GetObjectCommand({ Bucket: process.env.S3_BUCKET!, Key: s3Key })
     );
     const videoBuffer = await streamToBuffer(s3Res.Body as Readable);
 
-    // Upload to YouTube
     const videoId = await uploadVideoToYouTube(accessToken, {
       title,
       description: description + (tags.length ? `\n\n${tags.map((t) => `#${t}`).join(" ")}` : ""),
@@ -91,7 +104,6 @@ export async function POST(
 
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-    // Persist published info to clip metadata so the UI can show the link
     const updateKey = `output_clip_metadata.${clipIndex}.youtube_video_id`;
     const updateUrl = `output_clip_metadata.${clipIndex}.youtube_url`;
     const updateScheduled = `output_clip_metadata.${clipIndex}.youtube_scheduled_at`;

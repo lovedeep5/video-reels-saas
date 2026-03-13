@@ -187,11 +187,21 @@ export const keysApi = {
   revoke: (id: string) => api.delete(`/keys/${id}`),
 };
 
+// ── Channels (multi-channel) ─────────────────────────────────────────────────
+
+export interface ChannelInfo {
+  id: string;
+  platform_account_id: string;
+  account_name: string;
+  connected_at: string;
+}
+
 // ── YouTube ─────────────────────────────────────────────────────────────────
 
 export interface YouTubeStatus {
   connected: boolean;
   configured: boolean;
+  channels: ChannelInfo[];
   channel?: { channel_id: string; channel_title: string; connected_at: string } | null;
 }
 
@@ -238,6 +248,7 @@ export const facelessApi = {
 export interface InstagramStatus {
   configured: boolean;
   connected: boolean;
+  channels: ChannelInfo[];
   account: { ig_user_id: string; username: string; connected_at: string } | null;
 }
 
@@ -248,14 +259,14 @@ export interface InstagramPublishResult {
 
 export const instagramApi = {
   status: () => api.get<InstagramStatus>("/instagram/status"),
-  disconnect: () => api.post("/instagram/disconnect"),
-  publish: (jobId: string, clipId: number, data: { caption: string }) =>
+  disconnect: (channelId?: string) => api.post("/instagram/disconnect", channelId ? { channel_id: channelId } : {}),
+  publish: (jobId: string, clipId: number, data: { caption: string; channel_id?: string }) =>
     api.post<InstagramPublishResult>(`/jobs/${jobId}/clips/${clipId}/publish-instagram`, data),
 };
 
 export const youtubeApi = {
   status: () => api.get<YouTubeStatus>("/youtube/status"),
-  disconnect: () => api.post("/youtube/disconnect"),
+  disconnect: (channelId?: string) => api.post("/youtube/disconnect", channelId ? { channel_id: channelId } : {}),
   suggestMetadata: (data: {
     transcript: string | null;
     video_title: string | null;
@@ -265,6 +276,6 @@ export const youtubeApi = {
   publish: (
     jobId: string,
     clipId: number,
-    data: { title: string; description: string; tags: string[]; visibility: string; publishAt?: string }
+    data: { title: string; description: string; tags: string[]; visibility: string; publishAt?: string; channel_id?: string }
   ) => api.post<YouTubePublishResult>(`/jobs/${jobId}/clips/${clipId}/publish-youtube`, data),
 };

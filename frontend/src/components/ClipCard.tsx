@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Clip, jobsApi, YouTubeStatus, InstagramStatus, youtubeApi, instagramApi, authApi, isPaidPlan, AuthUser } from "@/lib/api";
+import { Clip, jobsApi, YouTubeStatus, InstagramStatus, ChannelInfo, youtubeApi, instagramApi, authApi, isPaidPlan, AuthUser } from "@/lib/api";
 
 interface Props {
   clip: Clip;
@@ -25,16 +25,18 @@ interface PublishModalProps {
   clip: Clip;
   jobId: string;
   videoTitle: string | null;
+  channels: ChannelInfo[];
   onClose: (publishedUrl?: string) => void;
 }
 
-function YouTubePublishModal({ clip, jobId, videoTitle, onClose }: PublishModalProps) {
+function YouTubePublishModal({ clip, jobId, videoTitle, channels, onClose }: PublishModalProps) {
   const [title, setTitle] = useState(clip.yt_title ?? "");
   const [description, setDescription] = useState(clip.yt_description ?? "");
   const [tags, setTags] = useState((clip.yt_tags ?? []).join(", "));
   const [visibility, setVisibility] = useState<"private" | "unlisted" | "public">("public");
   const [publishMode, setPublishMode] = useState<"now" | "schedule">("now");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [selectedChannelId, setSelectedChannelId] = useState(channels[0]?.id ?? "");
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url: string; scheduled?: string } | null>(null);
   const [error, setError] = useState("");
@@ -54,6 +56,7 @@ function YouTubePublishModal({ clip, jobId, videoTitle, onClose }: PublishModalP
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         visibility,
         ...(publishMode === "schedule" ? { publishAt: new Date(scheduledAt).toISOString() } : {}),
+        ...(selectedChannelId ? { channel_id: selectedChannelId } : {}),
       });
       setResult({ url: res.data.youtube_url, scheduled: publishMode === "schedule" ? scheduledAt : undefined });
     } catch (e: unknown) {
@@ -98,6 +101,16 @@ function YouTubePublishModal({ clip, jobId, videoTitle, onClose }: PublishModalP
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
                 AI-generated during processing — edit freely before publishing
+              </div>
+            )}
+            {channels.length > 1 && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Channel</label>
+                <select value={selectedChannelId} onChange={(e) => setSelectedChannelId(e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500">
+                  {channels.map((ch) => (
+                    <option key={ch.id} value={ch.id}>{ch.account_name}</option>
+                  ))}
+                </select>
               </div>
             )}
             <div>
@@ -154,11 +167,14 @@ interface IgPublishModalProps {
   clip: Clip;
   jobId: string;
   videoTitle: string | null;
-  igUsername: string;
+  channels: ChannelInfo[];
   onClose: (publishedUrl?: string) => void;
 }
 
-function InstagramPublishModal({ clip, jobId, videoTitle, igUsername, onClose }: IgPublishModalProps) {
+function InstagramPublishModal({ clip, jobId, videoTitle, channels, onClose }: IgPublishModalProps) {
+  const [selectedChannelId, setSelectedChannelId] = useState(channels[0]?.id ?? "");
+  const selectedChannel = channels.find((c) => c.id === selectedChannelId) ?? channels[0];
+  const igUsername = selectedChannel?.account_name ?? "";
   const [caption, setCaption] = useState(
     clip.yt_description
       ? `${clip.yt_title ?? videoTitle ?? ""}\n\n${clip.yt_description}`.trim()
@@ -172,7 +188,7 @@ function InstagramPublishModal({ clip, jobId, videoTitle, igUsername, onClose }:
     setPublishing(true);
     setError("");
     try {
-      const res = await instagramApi.publish(jobId, clip.clip_index, { caption: caption.trim() });
+      const res = await instagramApi.publish(jobId, clip.clip_index, { caption: caption.trim(), channel_id: selectedChannelId });
       setResult({ url: res.data.instagram_url });
     } catch (e: unknown) {
       setError((e as any)?.response?.data?.error || (e as Error).message || "Publish failed");
@@ -211,9 +227,20 @@ function InstagramPublishModal({ clip, jobId, videoTitle, igUsername, onClose }:
           </div>
         ) : (
           <div className="p-6 flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2">
-              Publishing as Reel to @{igUsername}
-            </div>
+            {channels.length > 1 ? (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Account</label>
+                <select value={selectedChannelId} onChange={(e) => setSelectedChannelId(e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500">
+                  {channels.map((ch) => (
+                    <option key={ch.id} value={ch.id}>@{ch.account_name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2">
+                Publishing as Reel to @{igUsername}
+              </div>
+            )}
             <div>
               <label className="block text-xs text-gray-400 mb-1">Caption<span className="float-right">{caption.length}/2200</span></label>
               <textarea maxLength={2200} rows={5} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Write a caption..." className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500 resize-none"/>
@@ -308,18 +335,19 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
           clip={clip}
           jobId={jobId}
           videoTitle={videoTitle ?? null}
+          channels={ytStatus?.channels ?? []}
           onClose={(url) => {
             setShowYtPublish(false);
             if (url) { setYtPublishedUrl(url); onPublished?.(clip.clip_index, url); }
           }}
         />
       )}
-      {showIgPublish && igStatus?.account && (
+      {showIgPublish && igStatus?.connected && (
         <InstagramPublishModal
           clip={clip}
           jobId={jobId}
           videoTitle={videoTitle ?? null}
-          igUsername={igStatus.account.username}
+          channels={igStatus?.channels ?? []}
           onClose={(url) => {
             setShowIgPublish(false);
             if (url) { setIgPublishedUrl(url); onPublished?.(clip.clip_index, url); }

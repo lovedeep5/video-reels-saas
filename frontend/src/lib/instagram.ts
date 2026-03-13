@@ -99,6 +99,7 @@ export async function getInstagramAccount(token: string): Promise<InstagramAccou
 export async function publishReel(
   token: string,
   igUserId: string,
+  igUsername: string,
   videoUrl: string,
   caption: string
 ): Promise<{ instagram_media_id: string; instagram_url: string }> {
@@ -152,38 +153,9 @@ export async function publishReel(
 
   const mediaId: string = publishData.id;
 
-  // Step 4: fetch the actual permalink (media ID ≠ URL slug)
-  let permalink = "";
-  try {
-    const permaRes = await fetch(
-      `${GRAPH_BASE}/${mediaId}?fields=permalink&access_token=${encodeURIComponent(token)}`
-    );
-    const permaData = await permaRes.json();
-    console.log("[instagram] permalink response:", JSON.stringify(permaData));
-    if (permaData.permalink) {
-      permalink = permaData.permalink;
-    }
-  } catch (e) {
-    console.error("[instagram] permalink fetch error:", e);
-  }
-  if (!permalink) {
-    // Try with API version prefix
-    try {
-      const permaRes2 = await fetch(
-        `${GRAPH_BASE}/${API_VERSION}/${mediaId}?fields=permalink&access_token=${encodeURIComponent(token)}`
-      );
-      const permaData2 = await permaRes2.json();
-      console.log("[instagram] permalink v2 response:", JSON.stringify(permaData2));
-      if (permaData2.permalink) {
-        permalink = permaData2.permalink;
-      }
-    } catch (e) {
-      console.error("[instagram] permalink v2 fetch error:", e);
-    }
-  }
-
+  // Return channel profile URL (permalink API is unreliable with Instagram Login tokens)
   return {
     instagram_media_id: mediaId,
-    instagram_url: permalink,
+    instagram_url: `https://www.instagram.com/${igUsername}/`,
   };
 }
