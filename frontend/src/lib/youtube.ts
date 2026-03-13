@@ -65,9 +65,12 @@ export async function getChannelInfo(accessToken: string) {
   });
   const data = await res.json();
   const channel = data.items?.[0];
+  if (!channel) {
+    console.error("[youtube] getChannelInfo returned no items:", JSON.stringify(data));
+  }
   return {
     channel_id: channel?.id ?? "",
-    channel_title: channel?.snippet?.title ?? "My Channel",
+    channel_title: channel?.snippet?.title || channel?.snippet?.customUrl || "Unknown Channel",
   };
 }
 

@@ -22,9 +22,9 @@ export async function GET(req: NextRequest) {
     client_id: clientId,
     redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL!.trim()}/api/youtube/callback`,
     response_type: "code",
-    scope: "https://www.googleapis.com/auth/youtube.upload",
+    scope: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly",
     access_type: "offline",
-    prompt: "consent",
+    prompt: "consent select_account",
     state: user._id!.toHexString(), // pass user ID as state for callback
   });
 
