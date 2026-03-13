@@ -4,7 +4,7 @@ import { jobsCol, ObjectId } from "@/lib/mongodb";
 import { usersCol } from "@/lib/mongodb";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { extendToken, publishReel } from "@/lib/instagram";
+import { refreshToken, publishReel } from "@/lib/instagram";
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION || "ap-south-1",
@@ -67,7 +67,7 @@ export async function POST(
 
   try {
     // Refresh the token (resets 60-day window)
-    const freshToken = await extendToken(user.instagram_access_token);
+    const freshToken = await refreshToken(user.instagram_access_token);
 
     // Persist refreshed token
     const users = await usersCol();

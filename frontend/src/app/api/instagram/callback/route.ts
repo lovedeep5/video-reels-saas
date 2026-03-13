@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!.trim();
 
   if (error || !code || !state) {
+    console.error("[instagram/callback] OAuth error:", error);
     return NextResponse.redirect(`${appUrl}/dashboard/settings?instagram=denied`);
   }
 
@@ -19,7 +20,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Instagram Login flow: code → short-lived → long-lived token
     const longLivedToken = await exchangeCodeForLongLivedToken(code);
+
+    // Get IG user info (user_id + username)
     const account = await getInstagramAccount(longLivedToken);
 
     const users = await usersCol();

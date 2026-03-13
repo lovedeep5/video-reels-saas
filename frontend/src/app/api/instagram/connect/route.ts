@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 const SCOPES = [
-  "instagram_basic",
-  "instagram_content_publish",
-  "pages_show_list",
-  "pages_read_engagement",
+  "instagram_business_basic",
+  "instagram_business_content_publish",
+  "instagram_business_manage_comments",
+  "instagram_business_manage_messages",
 ].join(",");
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!process.env.META_APP_ID || !process.env.META_APP_SECRET) {
+  if (!process.env.INSTAGRAM_APP_ID || !process.env.INSTAGRAM_APP_SECRET) {
     return NextResponse.json({ error: "Instagram integration not configured" }, { status: 503 });
   }
 
@@ -25,8 +25,9 @@ export async function GET(req: NextRequest) {
   const state = user._id!.toHexString();
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL!.trim()}/api/instagram/callback`;
 
-  const oauthUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth");
-  oauthUrl.searchParams.set("client_id", process.env.META_APP_ID);
+  // Instagram Login flow (2025+) — uses api.instagram.com, NOT facebook.com
+  const oauthUrl = new URL("https://www.instagram.com/oauth/authorize");
+  oauthUrl.searchParams.set("client_id", process.env.INSTAGRAM_APP_ID);
   oauthUrl.searchParams.set("redirect_uri", redirectUri);
   oauthUrl.searchParams.set("scope", SCOPES);
   oauthUrl.searchParams.set("state", state);

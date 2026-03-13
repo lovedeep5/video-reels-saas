@@ -63,6 +63,8 @@ export interface Clip {
   yt_title: string | null;
   yt_description: string | null;
   yt_tags: string[];
+  instagram_media_id: string | null;
+  instagram_url: string | null;
 }
 
 export interface Job {
@@ -229,6 +231,26 @@ export interface FacelessSubmitParams {
 export const facelessApi = {
   submit: (params: FacelessSubmitParams) =>
     api.post<{ job_ids: string[]; message: string }>("/faceless/submit", params),
+};
+
+// ── Instagram ────────────────────────────────────────────────────────────────
+
+export interface InstagramStatus {
+  configured: boolean;
+  connected: boolean;
+  account: { ig_user_id: string; username: string; connected_at: string } | null;
+}
+
+export interface InstagramPublishResult {
+  instagram_media_id: string;
+  instagram_url: string;
+}
+
+export const instagramApi = {
+  status: () => api.get<InstagramStatus>("/instagram/status"),
+  disconnect: () => api.post("/instagram/disconnect"),
+  publish: (jobId: string, clipId: number, data: { caption: string }) =>
+    api.post<InstagramPublishResult>(`/jobs/${jobId}/clips/${clipId}/publish-instagram`, data),
 };
 
 export const youtubeApi = {

@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/health",
   "/api/auth/debug-token",
   "/api/billing/webhook",
+  "/api/instagram/callback",
+  "/api/youtube/callback",
   "/opengraph-image(.*)",
   "/twitter-image(.*)",
   "/icon(.*)",
