@@ -1,0 +1,3 @@
+Contact: mailto:contact@vidtoreels.com
+Preferred-Languages: en
+Canonical: https://vidtoreels.com/.well-known/security.txt

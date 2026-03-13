@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import ClerkTokenSync from "@/components/ClerkTokenSync";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
+import FacebookPixel from "@/components/FacebookPixel";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,6 +22,9 @@ export const metadata: Metadata = {
     "YouTube Shorts creator",
     "auto crop video",
     "AI voiceover video",
+    "faceless YouTube channel",
+    "AI content creator",
+    "video repurposing tool",
   ],
   openGraph: {
     title: "VidToReels — AI Video Clips & Faceless Video Generator",
@@ -28,6 +33,7 @@ export const metadata: Metadata = {
     url: "https://vidtoreels.com",
     siteName: "VidToReels",
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
@@ -37,6 +43,13 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: { canonical: "https://vidtoreels.com" },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+  },
+  other: {
+    "facebook-domain-verification":
+      process.env.NEXT_PUBLIC_FB_DOMAIN_VERIFICATION || "",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +57,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider afterSignOutUrl="/login">
       <html lang="en">
         <body>
+          <GoogleAnalytics />
+          <FacebookPixel />
           <ClerkTokenSync />
           {children}
         </body>

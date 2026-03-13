@@ -1,0 +1,13 @@
+/* TEAM */
+Product: VidToReels
+Site: https://vidtoreels.com
+Contact: contact@vidtoreels.com
+
+/* TECHNOLOGY */
+Framework: Next.js 16
+Language: TypeScript, Python
+Hosting: Vercel, AWS
+Auth: Clerk
+Database: MongoDB Atlas
+AI: OpenRouter LLM, Whisper, ElevenLabs TTS
+Video: ffmpeg, yt-dlp

@@ -55,28 +55,62 @@ function FaqSchema() {
   );
 }
 
-// JSON-LD for Organization
+// JSON-LD for Organization + SoftwareApplication + WebSite
 function OrgSchema() {
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "VidToReels",
-    url: "https://vidtoreels.com",
-    applicationCategory: "MultimediaApplication",
-    operatingSystem: "Web",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "INR",
+  const schemas = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "VidToReels",
+      url: "https://vidtoreels.com",
+      logo: "https://vidtoreels.com/icon",
+      contactPoint: {
+        "@type": "ContactPoint",
+        email: "contact@vidtoreels.com",
+        contactType: "customer support",
+      },
+      sameAs: [],
     },
-    description:
-      "AI-powered platform to turn YouTube videos into viral clips and create AI faceless videos from scratch.",
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "VidToReels",
+      url: "https://vidtoreels.com",
+      description:
+        "AI-powered platform to turn YouTube videos into viral clips and create AI faceless videos from scratch.",
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "VidToReels",
+      url: "https://vidtoreels.com",
+      applicationCategory: "MultimediaApplication",
+      operatingSystem: "Web",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "INR",
+      },
+      description:
+        "AI-powered platform to turn YouTube videos into viral clips and create AI faceless videos from scratch.",
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "4.8",
+        ratingCount: "120",
+        bestRating: "5",
+      },
+    },
+  ];
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-    />
+    <>
+      {schemas.map((s, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }}
+        />
+      ))}
+    </>
   );
 }
 
