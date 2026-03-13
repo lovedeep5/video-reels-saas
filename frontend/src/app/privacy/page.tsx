@@ -23,7 +23,11 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">1. Who We Are</h2>
             <p>
-              VidToReels ("we", "us", "our") is a SaaS tool that converts YouTube videos into
+              VidToReels ("we", "us", "our") is a product of{" "}
+              <a href="https://www.flaircross.com/" className="text-indigo-400 hover:text-indigo-300" target="_blank" rel="noopener noreferrer">
+                Flaircross Consultancy
+              </a>
+              . VidToReels is a SaaS tool that converts YouTube videos into
               short-form vertical clips using AI. Our service is available at{" "}
               <a href="https://vidtoreels.com" className="text-indigo-400 hover:text-indigo-300">
                 vidtoreels.com

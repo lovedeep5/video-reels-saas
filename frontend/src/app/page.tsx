@@ -877,7 +877,7 @@ curl -X POST https://vidtoreels.com/api/faceless/submit \\
           </div>
           <div className="border-t border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-gray-600">
-              &copy; {new Date().getFullYear()} VidToReels. All rights reserved.
+              &copy; {new Date().getFullYear()} <a href="https://www.flaircross.com/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Flaircross Consultancy</a>. All rights reserved.
             </p>
             <div className="flex gap-4 text-xs text-gray-500">
               <a href="mailto:contact@vidtoreels.com" className="hover:text-white transition-colors">contact@vidtoreels.com</a>
