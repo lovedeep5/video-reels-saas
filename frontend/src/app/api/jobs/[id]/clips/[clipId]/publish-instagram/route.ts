@@ -83,6 +83,7 @@ export async function POST(
     // Persist refreshed token
     const users = await usersCol();
     if (channel.id === "legacy_ig") {
+      // Virtual legacy channel — update legacy fields only
       await users.updateOne(
         { _id: user._id },
         { $set: { instagram_access_token: freshToken, instagram_token_updated_at: new Date() } }
@@ -92,6 +93,13 @@ export async function POST(
         { _id: user._id, "connected_channels.id": channel.id },
         { $set: { "connected_channels.$.access_token": freshToken, "connected_channels.$.token_updated_at": new Date() } }
       );
+      // Also update legacy fields if this channel matches the legacy account
+      if (user.instagram_account && channel.platform_account_id === user.instagram_account.ig_user_id) {
+        await users.updateOne(
+          { _id: user._id },
+          { $set: { instagram_access_token: freshToken, instagram_token_updated_at: new Date() } }
+        );
+      }
     }
 
     // Generate pre-signed S3 URL (10 min)

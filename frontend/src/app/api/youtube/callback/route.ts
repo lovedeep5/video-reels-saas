@@ -35,24 +35,44 @@ export async function GET(req: NextRequest) {
       (c) => c.platform === "youtube" && c.platform_account_id === channelInfo.channel_id
     );
     if (existing) {
-      // Update refresh token for existing channel
-      await users.updateOne(
-        { _id: user._id, "connected_channels.id": existing.id },
-        {
-          $set: {
-            "connected_channels.$.refresh_token": tokens.refresh_token,
-            "connected_channels.$.account_name": channelInfo.channel_title,
-          },
-        }
-      );
-      // Also update legacy fields if this is the legacy channel
       if (existing.id === "legacy_yt") {
+        // Legacy channel only exists virtually — update legacy fields and persist to array
         await users.updateOne(
           { _id: user._id },
           {
             $set: {
               youtube_refresh_token: tokens.refresh_token,
               "youtube_channel.channel_title": channelInfo.channel_title,
+            },
+          }
+        );
+        // Also add to connected_channels array if not there yet
+        const hasInArray = (user.connected_channels ?? []).some((c) => c.platform === "youtube" && c.platform_account_id === channelInfo.channel_id);
+        if (!hasInArray) {
+          await users.updateOne(
+            { _id: user._id },
+            {
+              $push: {
+                connected_channels: {
+                  id: new ObjectId().toHexString(),
+                  platform: "youtube" as const,
+                  platform_account_id: channelInfo.channel_id,
+                  account_name: channelInfo.channel_title,
+                  refresh_token: tokens.refresh_token,
+                  connected_at: user.youtube_channel?.connected_at ?? new Date(),
+                },
+              },
+            }
+          );
+        }
+      } else {
+        // Real entry in connected_channels array — update in place
+        await users.updateOne(
+          { _id: user._id, "connected_channels.id": existing.id },
+          {
+            $set: {
+              "connected_channels.$.refresh_token": tokens.refresh_token,
+              "connected_channels.$.account_name": channelInfo.channel_title,
             },
           }
         );

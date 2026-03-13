@@ -36,19 +36,8 @@ export async function GET(req: NextRequest) {
       (c) => c.platform === "instagram" && c.platform_account_id === account.ig_user_id
     );
     if (existing) {
-      // Update token for existing channel
-      await users.updateOne(
-        { _id: user._id, "connected_channels.id": existing.id },
-        {
-          $set: {
-            "connected_channels.$.access_token": longLivedToken,
-            "connected_channels.$.token_updated_at": new Date(),
-            "connected_channels.$.account_name": account.username,
-          },
-        }
-      );
-      // Also update legacy fields if this is the legacy channel
       if (existing.id === "legacy_ig") {
+        // Legacy channel only exists virtually — update legacy fields and persist to array
         await users.updateOne(
           { _id: user._id },
           {
@@ -56,6 +45,40 @@ export async function GET(req: NextRequest) {
               instagram_access_token: longLivedToken,
               instagram_token_updated_at: new Date(),
               "instagram_account.username": account.username,
+            },
+          }
+        );
+        // Also add to connected_channels array if not there yet
+        const hasInArray = (user.connected_channels ?? []).some(
+          (c) => c.platform === "instagram" && c.platform_account_id === account.ig_user_id
+        );
+        if (!hasInArray) {
+          await users.updateOne(
+            { _id: user._id },
+            {
+              $push: {
+                connected_channels: {
+                  id: new ObjectId().toHexString(),
+                  platform: "instagram" as const,
+                  platform_account_id: account.ig_user_id,
+                  account_name: account.username,
+                  access_token: longLivedToken,
+                  token_updated_at: new Date(),
+                  connected_at: user.instagram_account?.connected_at ?? new Date(),
+                },
+              },
+            }
+          );
+        }
+      } else {
+        // Real entry in connected_channels array — update in place
+        await users.updateOne(
+          { _id: user._id, "connected_channels.id": existing.id },
+          {
+            $set: {
+              "connected_channels.$.access_token": longLivedToken,
+              "connected_channels.$.token_updated_at": new Date(),
+              "connected_channels.$.account_name": account.username,
             },
           }
         );

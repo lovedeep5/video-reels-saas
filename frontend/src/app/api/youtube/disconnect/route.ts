@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { usersCol } from "@/lib/mongodb";
+import { usersCol, getChannels } from "@/lib/mongodb";
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser(req);
@@ -12,11 +12,19 @@ export async function POST(req: NextRequest) {
   const users = await usersCol();
 
   if (channelId) {
+    // Find the channel being disconnected to check if it matches legacy account
+    const channels = getChannels(user);
+    const channel = channels.find((c) => c.id === channelId);
+
     await users.updateOne(
       { _id: user._id },
       { $pull: { connected_channels: { id: channelId } } }
     );
-    if (channelId === "legacy_yt") {
+    // Clear legacy fields if this channel matches the legacy YouTube account
+    if (
+      channelId === "legacy_yt" ||
+      (channel && user.youtube_channel && channel.platform_account_id === user.youtube_channel.channel_id)
+    ) {
       await users.updateOne(
         { _id: user._id },
         { $unset: { youtube_refresh_token: "", youtube_channel: "" } }

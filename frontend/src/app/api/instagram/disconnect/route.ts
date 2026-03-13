@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { usersCol } from "@/lib/mongodb";
+import { usersCol, getChannels } from "@/lib/mongodb";
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser(req);
@@ -12,13 +12,20 @@ export async function POST(req: NextRequest) {
   const users = await usersCol();
 
   if (channelId) {
+    // Find the channel being disconnected to check if it matches legacy account
+    const channels = getChannels(user);
+    const channel = channels.find((c) => c.id === channelId);
+
     // Remove specific channel from array
     await users.updateOne(
       { _id: user._id },
       { $pull: { connected_channels: { id: channelId } } }
     );
-    // If removing legacy channel, also clear legacy fields
-    if (channelId === "legacy_ig") {
+    // Clear legacy fields if this channel matches the legacy Instagram account
+    if (
+      channelId === "legacy_ig" ||
+      (channel && user.instagram_account && channel.platform_account_id === user.instagram_account.ig_user_id)
+    ) {
       await users.updateOne(
         { _id: user._id },
         { $unset: { instagram_access_token: "", instagram_token_updated_at: "", instagram_account: "" } }

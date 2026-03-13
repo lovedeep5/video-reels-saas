@@ -103,7 +103,7 @@ function YouTubePublishModal({ clip, jobId, videoTitle, channels, onClose }: Pub
                 AI-generated during processing — edit freely before publishing
               </div>
             )}
-            {channels.length > 1 && (
+            {channels.length > 1 ? (
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Channel</label>
                 <select value={selectedChannelId} onChange={(e) => setSelectedChannelId(e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500">
@@ -112,7 +112,11 @@ function YouTubePublishModal({ clip, jobId, videoTitle, channels, onClose }: Pub
                   ))}
                 </select>
               </div>
-            )}
+            ) : channels.length === 1 ? (
+              <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2">
+                Publishing to {channels[0].account_name}
+              </div>
+            ) : null}
             <div>
               <label className="block text-xs text-gray-400 mb-1">Title <span className="text-red-400">*</span><span className="float-right">{title.length}/100</span></label>
               <input type="text" maxLength={100} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter video title..." className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500"/>
