@@ -109,7 +109,7 @@ def run():
     os.environ["S3_BUCKET"]             = S3_BUCKET
     os.environ["OPENROUTER_API_KEY"]    = OPENROUTER_API_KEY
 
-    log(f"user={job.get('user_id')} plan={plan_key} source_type={job.get('source_type','url')} clips_requested={job.get('clips_requested')} url={job.get('source_url','')[:80]}")
+    log(f"user={job.get('user_id')} plan={plan_key} source_type={job.get('source_type','url')} clips_requested={job.get('clips_requested')} url={(job.get('source_url') or '')[:80]}")
 
     try:
         if job.get("source_type") == "faceless":
