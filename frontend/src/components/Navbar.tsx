@@ -25,6 +25,7 @@ export default function Navbar() {
     ...(meta?.is_admin ? [{ href: "/dashboard/upload", label: "YouTube Clips" }] : []),
     { href: "/dashboard/faceless", label: "Create Video" },
     { href: "/dashboard/schedule", label: "Schedule" },
+    { href: "/dashboard/automations", label: "Automate" },
     { href: "/dashboard/keys", label: "API Keys" },
     { href: "/billing", label: "Billing" },
     { href: "/dashboard/settings", label: "Settings" },
