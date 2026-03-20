@@ -135,13 +135,14 @@ const NAV = [
   {
     label: "Endpoints",
     children: [
-      { id: "submit-job",     label: "Submit Job" },
       { id: "submit-faceless", label: "Create Faceless Video" },
       { id: "list-jobs",      label: "List Jobs" },
       { id: "get-job",        label: "Get Job" },
       { id: "download-clip",  label: "Download Clip" },
       { id: "retry-job",      label: "Retry Job" },
       { id: "check-usage",    label: "Check Usage" },
+      { id: "schedule",       label: "Schedule Publish" },
+      { id: "automations",    label: "Automations" },
     ],
   },
   { id: "job-statuses",  label: "Job Statuses" },
@@ -296,25 +297,27 @@ Authorization: Bearer vr_live_xxxxxxxxxxxxxxxxxxxxxxxx
           <Section id="quickstart">
             <H2>Quickstart</H2>
             <P>
-              Here is a complete end-to-end example: submit a YouTube video, poll until it is
-              done, then download all clips.
+              Create an AI faceless video, poll until it is done, then download the result.
             </P>
 
-            <H3>1 — Submit the video</H3>
+            <H3>1 — Create a video</H3>
             <Code lang="bash">{`
-curl -X POST https://vidtoreels.com/api/videos/submit-url \\
+curl -X POST https://vidtoreels.com/api/faceless/submit \\
   -H "X-API-Key: vr_live_xxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
-    "clips_requested": 5,
-    "output_ratio": "9:16"
+    "topic": "5 terrifying facts about the deep ocean",
+    "script_type": "horror",
+    "style": "dark-fantasy",
+    "voice": "emma",
+    "duration": 30,
+    "music": "dark-suspense"
   }'
             `}</Code>
             <Code lang="json">{`
 {
-  "job_id": "6641a2f3c4e1b90012345678",
-  "message": "Job created and queued"
+  "job_ids": ["6641a2f3c4e1b90012345678"],
+  "message": "1 faceless video queued"
 }
             `}</Code>
 
@@ -324,36 +327,21 @@ curl https://vidtoreels.com/api/jobs/6641a2f3c4e1b90012345678 \\
   -H "X-API-Key: vr_live_xxxxxxxx"
             `}</Code>
             <P>
-              Repeat this request every 10–15 seconds until <code className="text-indigo-300 font-mono text-sm">status</code> is{" "}
-              <code className="text-green-400 font-mono text-sm">"completed"</code> (or{" "}
-              <code className="text-red-400 font-mono text-sm">"failed"</code>).
+              Repeat every 15 seconds until <code className="text-indigo-300 font-mono text-sm">status</code> is{" "}
+              <code className="text-green-400 font-mono text-sm">&quot;completed&quot;</code> or{" "}
+              <code className="text-red-400 font-mono text-sm">&quot;failed&quot;</code>.
             </P>
-            <Code lang="json">{`
-{
-  "id": "6641a2f3c4e1b90012345678",
-  "status": "completed",
-  "progress": 100,
-  "video_title": "Never Gonna Give You Up",
-  "clips": [
-    { "id": 0, "clip_index": 0, "duration": 38.4, "importance_score": 0.92 },
-    { "id": 1, "clip_index": 1, "duration": 34.1, "importance_score": 0.87 },
-    ...
-  ]
-}
-            `}</Code>
 
-            <H3>3 — Download the clips</H3>
+            <H3>3 — Download the video</H3>
             <Code lang="bash">{`
-# Get a 1-hour pre-signed download URL for clip 0
 curl https://vidtoreels.com/api/jobs/6641a2f3c4e1b90012345678/clips/0/download \\
   -H "X-API-Key: vr_live_xxxxxxxx"
             `}</Code>
             <Code lang="json">{`
 {
-  "url": "https://s3.amazonaws.com/vidtoreel-bucket/users/.../clip_0.mp4?X-Amz-Signature=..."
+  "url": "https://vidtoreel-bucket.s3.ap-south-1.amazonaws.com/users/.../clip_1.mp4?..."
 }
             `}</Code>
-            <P>Use the returned <code className="text-indigo-300 font-mono text-sm">url</code> to download the MP4 directly — no auth needed on the S3 URL itself.</P>
 
             <H3>Full example in Python</H3>
             <Code lang="python">{`
@@ -363,86 +351,35 @@ API_KEY = "vr_live_xxxxxxxx"
 BASE    = "https://vidtoreels.com/api"
 headers = {"X-API-Key": API_KEY}
 
-# 1. Submit
-resp = requests.post(f"{BASE}/videos/submit-url", headers=headers, json={
-    "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
-    "clips_requested": 5,
+# 1. Create video
+resp = requests.post(f"{BASE}/faceless/submit", headers=headers, json={
+    "topic": "The mystery of the Bermuda Triangle",
+    "script_type": "story",
+    "style": "dark-fantasy",
+    "voice": "andrew",
+    "duration": 30,
+    "music": "epic-cinematic",
 })
-job_id = resp.json()["job_id"]
+job_id = resp.json()["job_ids"][0]
 print(f"Job created: {job_id}")
 
 # 2. Poll
 while True:
     job = requests.get(f"{BASE}/jobs/{job_id}", headers=headers).json()
-    print(f"  {job['status']} — {job['progress']}% — {job['progress_message']}")
+    print(f"  {job['status']} — {job['progress']}%")
     if job["status"] in ("completed", "failed"):
         break
     time.sleep(15)
 
-if job["status"] == "failed":
-    print("Job failed:", job.get("error_message"))
-else:
-    # 3. Download each clip
-    for clip in job["clips"]:
-        dl = requests.get(
-            f"{BASE}/jobs/{job_id}/clips/{clip['clip_index']}/download",
-            headers=headers,
-        ).json()
-        data = requests.get(dl["url"]).content
-        fname = f"clip_{clip['clip_index'] + 1}.mp4"
-        open(fname, "wb").write(data)
-        print(f"Saved {fname}")
+# 3. Download
+if job["status"] == "completed":
+    dl = requests.get(f"{BASE}/jobs/{job_id}/clips/0/download", headers=headers).json()
+    open("video.mp4", "wb").write(requests.get(dl["url"]).content)
+    print("Saved video.mp4")
             `}</Code>
           </Section>
 
           {/* ── ENDPOINTS ────────────────────────────────────────── */}
-
-          {/* Submit Job */}
-          <Section id="submit-job">
-            <H2>Submit Job</H2>
-            <div className="flex items-center gap-3 mb-4">
-              <Method m="POST" />
-              <code className="text-sm font-mono text-gray-200">/api/videos/submit-url</code>
-            </div>
-            <P>
-              Submit a YouTube (or any yt-dlp-supported) URL for processing. The job is queued
-              immediately and an EC2 worker is spun up within ~1–3 minutes to process it.
-            </P>
-
-            <H3>Request body</H3>
-            <ParamTable>
-              <ParamRow name="url" type="string" required desc="YouTube or other yt-dlp-supported video URL." />
-              <ParamRow name="clips_requested" type="integer" desc="Number of clips to generate. Default: 5. Capped by your plan's clips_per_video limit." />
-              <ParamRow name="output_ratio" type="string" desc={`Aspect ratio for output clips. One of: "9:16" (default, vertical), "1:1" (square), "4:5", "16:9" (landscape).`} />
-              <ParamRow name="include_captions" type="boolean" desc="If true, English subtitles are burned into the clip. Non-English audio is auto-translated. Default: false." />
-            </ParamTable>
-
-            <H3>Example request</H3>
-            <Code lang="bash">{`
-curl -X POST https://vidtoreels.com/api/videos/submit-url \\
-  -H "X-API-Key: vr_live_xxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
-    "clips_requested": 3,
-    "output_ratio": "9:16",
-    "include_captions": true
-  }'
-            `}</Code>
-
-            <H3>Response</H3>
-            <Code lang="json">{`
-{
-  "job_id": "6641a2f3c4e1b90012345678",
-  "message": "Job created and queued"
-}
-            `}</Code>
-
-            <Callout type="info">
-              Submitting a job counts against your monthly video limit immediately, even if the job
-              later fails. See <a href="#rate-limits" className="underline">Plan Limits</a>.
-            </Callout>
-          </Section>
 
           {/* Create Faceless Video */}
           <Section id="submit-faceless">
@@ -459,11 +396,12 @@ curl -X POST https://vidtoreels.com/api/videos/submit-url \\
             <H3>Request body</H3>
             <ParamTable>
               <ParamRow name="topic" type="string" required desc="The topic or story for the video. At least 3 characters. e.g. &quot;5 amazing facts about black holes&quot;" />
-              <ParamRow name="style" type="string" desc={`Visual style for AI-generated images. One of: "ghibli" (default), "anime", "cartoon", "comic", "realistic", "watercolor".`} />
+              <ParamRow name="script_type" type="string" desc={`Script format. One of: "story" (default), "facts", "explainer", "listicle", "horror", "motivation".`} />
+              <ParamRow name="style" type="string" desc={`Visual style. One of: "creepy-comic" (default), "comic", "modern-cartoon", "disney", "ghibli", "anime", "painting", "dark-fantasy", "lego", "polaroid", "realistic", "fantastic".`} />
               <ParamRow name="voice" type="string" desc={`Narrator voice. One of: "andrew" (default), "jack", "emma", "aria", "ryan", "sonia".`} />
               <ParamRow name="duration" type="integer" desc="Target video duration in seconds. One of: 10, 15, 30 (default), 60." />
-              <ParamRow name="music" type="string" desc={`Background music track. One of: "none" (default), "happy-rhythm", "suspenseful", "peaceful", "epic-cinematic", "mysterious", "energetic".`} />
-              <ParamRow name="text_style" type="string" desc={`Subtitle/text style. One of: "bold-stroke" (default), "red-highlight", "karaoke", "sleek", "beast", "elegant".`} />
+              <ParamRow name="music" type="string" desc={`Background music. One of: "none" (default), "upbeat-happy", "epic-cinematic", "dark-suspense", "emotional-piano", "chill-lounge", "motivation-rock", "fantasy-orchestra", "dark-cyberpunk", "nature-ambient", "groovy-trap", "energetic-action", "slow-motion".`} />
+              <ParamRow name="auto_publish" type="object" desc={`Optional. Auto-post when video is ready. Format: { "platforms": [{"platform": "youtube", "channel_id": "..."}], "visibility": "public" }`} />
             </ParamTable>
 
             <H3>Example request</H3>
@@ -770,6 +708,116 @@ curl https://vidtoreels.com/api/jobs/usage \\
             </P>
           </Section>
 
+          {/* Schedule Publish */}
+          <Section id="schedule">
+            <H2>Schedule Publish</H2>
+            <div className="flex items-center gap-3 mb-4">
+              <Method m="POST" />
+              <code className="text-sm font-mono text-gray-200">/api/schedule</code>
+            </div>
+            <P>
+              Schedule a completed video to be published to YouTube or Instagram at a specific time.
+              Requires Creator, Pro, or Business plan.
+            </P>
+
+            <H3>Request body</H3>
+            <ParamTable>
+              <ParamRow name="job_id" type="string" required desc="ID of a completed job." />
+              <ParamRow name="clip_index" type="integer" required desc="Zero-based clip index (usually 0 for faceless videos)." />
+              <ParamRow name="platform" type="string" required desc={`"youtube" or "instagram".`} />
+              <ParamRow name="channel_id" type="string" required desc="ID of a connected channel from your settings." />
+              <ParamRow name="scheduled_at" type="string" required desc="ISO 8601 datetime for when to publish. Must be at least 1 minute in the future." />
+              <ParamRow name="title" type="string" desc="Video title (YouTube) or caption (Instagram)." />
+              <ParamRow name="description" type="string" desc="YouTube description." />
+              <ParamRow name="tags" type="string[]" desc="YouTube tags array." />
+              <ParamRow name="visibility" type="string" desc={`YouTube visibility: "public" (default), "unlisted", or "private".`} />
+            </ParamTable>
+
+            <H3>Example</H3>
+            <Code lang="bash">{`
+curl -X POST https://vidtoreels.com/api/schedule \\
+  -H "X-API-Key: vr_live_xxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "job_id": "6641a2f3c4e1b90012345678",
+    "clip_index": 0,
+    "platform": "youtube",
+    "channel_id": "ch_abc123",
+    "scheduled_at": "2026-03-22T14:00:00Z",
+    "title": "5 Terrifying Deep Sea Facts",
+    "visibility": "public"
+  }'
+            `}</Code>
+
+            <H3>List scheduled publishes</H3>
+            <div className="flex items-center gap-3 mb-3">
+              <Method m="GET" />
+              <code className="text-sm font-mono text-gray-200">/api/schedule</code>
+            </div>
+            <P>Returns all your scheduled publishes. Filter with <code className="text-indigo-300 font-mono text-sm">?status=scheduled</code> or <code className="text-indigo-300 font-mono text-sm">?platform=youtube</code>.</P>
+
+            <H3>Cancel a scheduled publish</H3>
+            <div className="flex items-center gap-3 mb-3">
+              <Method m="DELETE" />
+              <code className="text-sm font-mono text-gray-200">/api/schedule/{"{id}"}</code>
+            </div>
+            <P>Cancels a scheduled publish (only if status is still &quot;scheduled&quot;).</P>
+          </Section>
+
+          {/* Automations */}
+          <Section id="automations">
+            <H2>Automations</H2>
+            <div className="flex items-center gap-3 mb-4">
+              <Method m="POST" />
+              <code className="text-sm font-mono text-gray-200">/api/automations</code>
+            </div>
+            <P>
+              Create a daily recurring automation. The system generates a unique video every day at your
+              chosen time and auto-publishes to your channels. Requires Pro or Business plan.
+            </P>
+
+            <H3>Request body</H3>
+            <ParamTable>
+              <ParamRow name="name" type="string" required desc="Display name for this automation." />
+              <ParamRow name="topics" type="string[]" required desc="Array of topics. System rotates through them daily with unique angles." />
+              <ParamRow name="script_type" type="string" desc={`Script format: "story", "facts", "horror", etc.`} />
+              <ParamRow name="style" type="string" desc="Visual style (same options as Create Faceless Video)." />
+              <ParamRow name="voice" type="string" desc="Narrator voice." />
+              <ParamRow name="music" type="string" desc="Background music track." />
+              <ParamRow name="duration" type="integer" desc="Video duration in seconds." />
+              <ParamRow name="post_hour" type="integer" required desc="Hour (0-23 UTC) to publish each day." />
+              <ParamRow name="platforms" type="array" required desc={`Publishing targets. e.g. [{"platform": "youtube", "channel_id": "..."}]`} />
+              <ParamRow name="visibility" type="string" desc={`YouTube visibility. Default: "public".`} />
+            </ParamTable>
+
+            <H3>Example</H3>
+            <Code lang="bash">{`
+curl -X POST https://vidtoreels.com/api/automations \\
+  -H "X-API-Key: vr_live_xxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Daily Horror",
+    "topics": ["Deep ocean terrors", "Haunted places"],
+    "script_type": "horror",
+    "style": "creepy-comic",
+    "voice": "emma",
+    "duration": 30,
+    "music": "dark-suspense",
+    "post_hour": 14,
+    "platforms": [{"platform": "youtube", "channel_id": "ch_abc123"}],
+    "visibility": "public"
+  }'
+            `}</Code>
+
+            <H3>Other automation endpoints</H3>
+            <div className="space-y-2 mt-3">
+              <div className="flex items-center gap-3"><Method m="GET" /><code className="text-sm font-mono text-gray-200">/api/automations</code><span className="text-sm text-gray-400">— List all automations</span></div>
+              <div className="flex items-center gap-3"><Method m="GET" /><code className="text-sm font-mono text-gray-200">/api/automations/{"{id}"}</code><span className="text-sm text-gray-400">— Get detail + recent runs</span></div>
+              <div className="flex items-center gap-3"><Method m="POST" /><code className="text-sm font-mono text-gray-200">PATCH /api/automations/{"{id}"}</code><span className="text-sm text-gray-400">— Update or pause/resume</span></div>
+              <div className="flex items-center gap-3"><Method m="DELETE" /><code className="text-sm font-mono text-gray-200">/api/automations/{"{id}"}</code><span className="text-sm text-gray-400">— Delete automation</span></div>
+            </div>
+          </Section>
+
           {/* Job Statuses */}
           <Section id="job-statuses">
             <H2>Job Statuses</H2>
@@ -844,28 +892,39 @@ curl https://vidtoreels.com/api/jobs/usage \\
                   <tr>
                     <th className="text-left px-4 py-3">Plan</th>
                     <th className="text-left px-4 py-3">Videos / month</th>
-                    <th className="text-left px-4 py-3">Clips / video</th>
-                    <th className="text-left px-4 py-3">Max video length</th>
+                    <th className="text-left px-4 py-3">Max duration</th>
+                    <th className="text-left px-4 py-3">Scheduling</th>
+                    <th className="text-left px-4 py-3">Automations</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800">
                   <tr className="bg-gray-950">
-                    <td className="px-4 py-3 font-medium text-gray-300">Free</td>
+                    <td className="px-4 py-3 font-medium text-gray-300">Starter (Free)</td>
                     <td className="px-4 py-3 text-gray-400">2</td>
-                    <td className="px-4 py-3 text-gray-400">3</td>
-                    <td className="px-4 py-3 text-gray-400">Unlimited</td>
+                    <td className="px-4 py-3 text-gray-400">30s</td>
+                    <td className="px-4 py-3 text-gray-500">—</td>
+                    <td className="px-4 py-3 text-gray-500">—</td>
+                  </tr>
+                  <tr className="bg-gray-950">
+                    <td className="px-4 py-3 font-medium text-cyan-300">Creator</td>
+                    <td className="px-4 py-3 text-gray-400">15</td>
+                    <td className="px-4 py-3 text-gray-400">3 min</td>
+                    <td className="px-4 py-3 text-green-400">Yes</td>
+                    <td className="px-4 py-3 text-gray-500">—</td>
                   </tr>
                   <tr className="bg-gray-950">
                     <td className="px-4 py-3 font-medium text-blue-300">Pro</td>
-                    <td className="px-4 py-3 text-gray-400">20</td>
-                    <td className="px-4 py-3 text-gray-400">10</td>
-                    <td className="px-4 py-3 text-gray-400">60 min</td>
+                    <td className="px-4 py-3 text-gray-400">50</td>
+                    <td className="px-4 py-3 text-gray-400">10 min</td>
+                    <td className="px-4 py-3 text-green-400">Yes</td>
+                    <td className="px-4 py-3 text-green-400">Yes</td>
                   </tr>
                   <tr className="bg-gray-950">
                     <td className="px-4 py-3 font-medium text-purple-300">Business</td>
                     <td className="px-4 py-3 text-gray-400">Unlimited</td>
-                    <td className="px-4 py-3 text-gray-400">20</td>
-                    <td className="px-4 py-3 text-gray-400">3 hours</td>
+                    <td className="px-4 py-3 text-gray-400">60 min</td>
+                    <td className="px-4 py-3 text-green-400">Yes</td>
+                    <td className="px-4 py-3 text-green-400">Yes</td>
                   </tr>
                 </tbody>
               </table>
