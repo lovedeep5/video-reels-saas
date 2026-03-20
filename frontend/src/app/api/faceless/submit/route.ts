@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   for (let i = 0; i < videoCount; i++) {
     // Build auto_publish_config if provided and plan allows it
-    let autoPublishConfig: { platforms: { platform: "youtube" | "instagram"; channel_id: string }[]; visibility?: string } | undefined;
+    let autoPublishConfig: { platforms: { platform: "youtube" | "instagram"; channel_id: string }[]; visibility?: string; scheduled_at?: string } | undefined;
     if (auto_publish && Array.isArray(auto_publish.platforms) && auto_publish.platforms.length > 0) {
       const planData = getPlan(user.plan);
       if (user.is_admin || ("auto_publish" in planData && planData.auto_publish)) {
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
             channel_id: p.channel_id,
           }));
         if (validPlatforms.length > 0) {
-          autoPublishConfig = { platforms: validPlatforms, visibility: auto_publish.visibility };
+          autoPublishConfig = { platforms: validPlatforms, visibility: auto_publish.visibility, scheduled_at: auto_publish.scheduled_at };
         }
       }
     }

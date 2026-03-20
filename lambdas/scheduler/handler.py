@@ -396,6 +396,13 @@ def _run_publisher():
         config = job.get("auto_publish_config", {})
         clips = job.get("output_clips") or []
         metadata = job.get("output_clip_metadata") or [{}]
+        # Use scheduled_at from config if provided, otherwise publish immediately
+        publish_at = now
+        if config.get("scheduled_at"):
+            try:
+                publish_at = datetime.fromisoformat(config["scheduled_at"].replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                publish_at = now
         for i in range(len(clips)):
             meta = metadata[i] if i < len(metadata) else {}
             for plat in config.get("platforms", []):
@@ -405,7 +412,7 @@ def _run_publisher():
                     "title": meta.get("yt_title"), "description": meta.get("yt_description"),
                     "tags": meta.get("yt_tags"),
                     "visibility": config.get("visibility", "public"),
-                    "scheduled_at": now, "status": "scheduled", "created_at": now, "updated_at": now,
+                    "scheduled_at": publish_at, "status": "scheduled", "created_at": now, "updated_at": now,
                 })
         db.jobs.update_one({"_id": job["_id"]}, {"$set": {"auto_publish_processed": True}})
 

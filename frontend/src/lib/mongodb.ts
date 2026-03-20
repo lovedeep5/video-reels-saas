@@ -150,6 +150,7 @@ export interface DbJob {
   auto_publish_config?: {
     platforms: { platform: "youtube" | "instagram"; channel_id: string }[];
     visibility?: string;
+    scheduled_at?: string;
   };
   auto_publish_processed?: boolean;
   created_at: Date;

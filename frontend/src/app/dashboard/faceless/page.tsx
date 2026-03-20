@@ -54,16 +54,16 @@ const ALL_VOICES = [
   { id: "ryan", label: "Ryan", desc: "Male · British", lang: "en", bestFor: "Story, Explainer", file: "/voices/ryan.mp3" },
   { id: "sonia", label: "Sonia", desc: "Female · British", lang: "en", bestFor: "Story, Motivation", file: "/voices/sonia.mp3" },
   // English Horror
-  { id: "phantom", label: "Phantom", desc: "Male · Deep horror narrator", lang: "en", bestFor: "Horror", file: "/voices/jack.mp3" },
-  { id: "whisper", label: "Whisper", desc: "Female · Eerie and slow", lang: "en", bestFor: "Horror", file: "/voices/aria.mp3" },
-  { id: "shadow", label: "Shadow", desc: "Male · Very deep, chilling", lang: "en", bestFor: "Horror", file: "/voices/ryan.mp3" },
+  { id: "phantom", label: "Phantom", desc: "Male · Deep horror narrator", lang: "en", bestFor: "Horror", file: "/voices/phantom.mp3" },
+  { id: "whisper", label: "Whisper", desc: "Female · Eerie and slow", lang: "en", bestFor: "Horror", file: "/voices/whisper.mp3" },
+  { id: "shadow", label: "Shadow", desc: "Male · Very deep, chilling", lang: "en", bestFor: "Horror", file: "/voices/shadow.mp3" },
   // Hindi
-  { id: "madhur", label: "Madhur", desc: "Male · Hindi narrator", lang: "hi", bestFor: "Story, Facts, Motivation", file: "/voices/andrew.mp3" },
-  { id: "swara", label: "Swara", desc: "Female · Hindi", lang: "hi", bestFor: "Story, Kids, Motivation", file: "/voices/emma.mp3" },
-  { id: "bhoot", label: "Bhoot", desc: "Male · Hindi horror", lang: "hi", bestFor: "Horror", file: "/voices/jack.mp3" },
+  { id: "madhur", label: "Madhur", desc: "Male · Hindi narrator", lang: "hi", bestFor: "Story, Facts, Motivation", file: "/voices/madhur.mp3" },
+  { id: "swara", label: "Swara", desc: "Female · Hindi", lang: "hi", bestFor: "Story, Kids, Motivation", file: "/voices/swara.mp3" },
+  { id: "bhoot", label: "Bhoot", desc: "Male · Hindi horror", lang: "hi", bestFor: "Horror", file: "/voices/bhoot.mp3" },
   // Indian English
-  { id: "prabhat", label: "Prabhat", desc: "Male · Indian English", lang: "en-in", bestFor: "Story, Facts, Explainer", file: "/voices/andrew.mp3" },
-  { id: "neerja", label: "Neerja", desc: "Female · Indian English", lang: "en-in", bestFor: "Story, Kids, Motivation", file: "/voices/emma.mp3" },
+  { id: "prabhat", label: "Prabhat", desc: "Male · Indian English", lang: "en-in", bestFor: "Story, Facts, Explainer", file: "/voices/prabhat.mp3" },
+  { id: "neerja", label: "Neerja", desc: "Female · Indian English", lang: "en-in", bestFor: "Story, Kids, Motivation", file: "/voices/neerja.mp3" },
 ];
 
 const MUSIC_TRACKS = [
@@ -307,7 +307,7 @@ export default function FacelessPage() {
         const res = await api.post("/faceless/submit", {
           topic: oneTopic, script_type: scriptType, style, voice, music,
           text_style: "bold-stroke", duration, count: 1,
-          ...(platforms.length > 0 ? { auto_publish: { platforms, visibility: autoVisibility } } : {}),
+          ...(platforms.length > 0 ? { auto_publish: { platforms, visibility: autoVisibility, scheduled_at: new Date(scheduleDate).toISOString() } } : {}),
         });
         const jobIds: string[] = res.data.job_ids;
         router.push(jobIds.length === 1 ? `/dashboard/jobs/${jobIds[0]}` : "/dashboard");
