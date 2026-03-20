@@ -65,7 +65,7 @@ export default function SettingsPage() {
     }
   }
 
-  const isPaid = user && (user.plan === "pro" || user.plan === "business");
+  const isPaid = user && (user.plan === "creator" || user.plan === "pro" || user.plan === "business");
   const isAdmin = user?.is_admin;
   const canPublish = isPaid || isAdmin;
 

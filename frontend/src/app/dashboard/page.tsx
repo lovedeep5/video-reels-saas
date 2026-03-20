@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { jobsApi, Job, Usage } from "@/lib/api";
+import { getPlanMeta } from "@/lib/auth";
 
 function statusColor(status: string) {
   switch (status) {
@@ -21,37 +22,41 @@ function timeAgo(iso: string): string {
 }
 
 function FeatureCards() {
-  return (
-    <div className="grid sm:grid-cols-2 gap-4 mb-8">
-      {/* YouTube to Clips */}
-      <Link
-        href="/dashboard/upload"
-        className="group relative overflow-hidden bg-gradient-to-br from-red-950/60 via-gray-900 to-gray-900 border border-red-900/40 hover:border-red-700/60 rounded-2xl p-6 transition-all hover:shadow-lg hover:shadow-red-950/20"
-      >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full -mr-10 -mt-10 group-hover:scale-125 transition-transform" />
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-red-900/50 border border-red-800/50 flex items-center justify-center text-lg">
-              <svg className="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-white text-base">YouTube to Clips</h3>
-              <span className="text-xs text-gray-500">Paste a URL, get viral clips</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-400 leading-relaxed mb-4">
-            AI analyzes any YouTube video, picks the best moments, and renders vertical clips ready for Shorts, Reels, or TikTok.
-          </p>
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-red-400 group-hover:text-red-300 transition-colors">
-            Create clips
-            <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </span>
-        </div>
-      </Link>
+  const isAdmin = getPlanMeta()?.is_admin;
 
-      {/* Faceless Videos */}
+  return (
+    <div className={`grid ${isAdmin ? "sm:grid-cols-2" : ""} gap-4 mb-8`}>
+      {/* YouTube to Clips — admin only */}
+      {isAdmin && (
+        <Link
+          href="/dashboard/upload"
+          className="group relative overflow-hidden bg-gradient-to-br from-red-950/60 via-gray-900 to-gray-900 border border-red-900/40 hover:border-red-700/60 rounded-2xl p-6 transition-all hover:shadow-lg hover:shadow-red-950/20"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full -mr-10 -mt-10 group-hover:scale-125 transition-transform" />
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-900/50 border border-red-800/50 flex items-center justify-center text-lg">
+                <svg className="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-white text-base">YouTube to Clips</h3>
+                <span className="text-xs text-gray-500">Paste a URL, get viral clips</span>
+              </div>
+            </div>
+            <p className="text-sm text-gray-400 leading-relaxed mb-4">
+              AI analyzes any YouTube video, picks the best moments, and renders vertical clips ready for Shorts, Reels, or TikTok.
+            </p>
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-red-400 group-hover:text-red-300 transition-colors">
+              Create clips
+              <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </span>
+          </div>
+        </Link>
+      )}
+
+      {/* Create AI Video */}
       <Link
         href="/dashboard/faceless"
         className="group relative overflow-hidden bg-gradient-to-br from-purple-950/60 via-gray-900 to-gray-900 border border-purple-900/40 hover:border-purple-700/60 rounded-2xl p-6 transition-all hover:shadow-lg hover:shadow-purple-950/20"
@@ -65,15 +70,15 @@ function FeatureCards() {
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-white text-base">AI Faceless Videos</h3>
+              <h3 className="font-semibold text-white text-base">Create AI Video</h3>
               <span className="text-xs text-purple-400/80 font-medium">NEW</span>
             </div>
           </div>
           <p className="text-sm text-gray-400 leading-relaxed mb-4">
-            Type a topic — AI writes the script, generates images, adds voiceover and music to create a complete faceless video.
+            Type a topic — AI writes the script, generates visuals, adds voiceover and music. Publish directly to YouTube &amp; Instagram.
           </p>
           <span className="inline-flex items-center gap-1.5 text-sm font-medium text-purple-400 group-hover:text-purple-300 transition-colors">
-            Create faceless video
+            Create video
             <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
           </span>
         </div>

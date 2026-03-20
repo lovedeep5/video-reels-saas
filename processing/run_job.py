@@ -38,9 +38,10 @@ TEMP_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 PLANS = {
-    "free":     {"clips_per_video": 3,  "videos_per_month": 2,   "max_duration_seconds": 0},
-    "pro":      {"clips_per_video": 10, "videos_per_month": 20,  "max_duration_seconds": 3600},
-    "business": {"clips_per_video": 20, "videos_per_month": -1,  "max_duration_seconds": 10800},
+    "free":     {"clips_per_video": 1,  "videos_per_month": 2,   "max_duration_seconds": 30},
+    "creator":  {"clips_per_video": 3,  "videos_per_month": 15,  "max_duration_seconds": 180},
+    "pro":      {"clips_per_video": 10, "videos_per_month": 50,  "max_duration_seconds": 600},
+    "business": {"clips_per_video": 20, "videos_per_month": -1,  "max_duration_seconds": 3600},
 }
 
 # ── MongoDB helpers ───────────────────────────────────────────────────────────

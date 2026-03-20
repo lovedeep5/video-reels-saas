@@ -105,7 +105,7 @@ export const authApi = {
 };
 
 export function isPaidPlan(plan: string) {
-  return plan === "pro" || plan === "business";
+  return plan === "creator" || plan === "pro" || plan === "business";
 }
 
 export const videoApi = {

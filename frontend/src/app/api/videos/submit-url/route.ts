@@ -7,6 +7,7 @@ import { getPlan, BILLABLE_STATUSES } from "@/lib/plans";
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user.is_admin) return NextResponse.json({ error: "This feature is admin-only" }, { status: 403 });
 
   const body = await req.json();
   const { url, clips_requested = 5, output_ratio = "9:16", include_captions = false } = body;

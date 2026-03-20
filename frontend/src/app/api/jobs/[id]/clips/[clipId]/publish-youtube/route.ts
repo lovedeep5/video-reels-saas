@@ -23,9 +23,9 @@ export async function POST(
   const user = await getCurrentUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const PAID_PLANS = ["pro", "business"];
+  const PAID_PLANS = ["creator", "pro", "business"];
   if (!user.is_admin && !PAID_PLANS.includes(user.plan)) {
-    return NextResponse.json({ error: "YouTube publishing is available on Pro and Business plans" }, { status: 403 });
+    return NextResponse.json({ error: "Publishing is available on Creator, Pro, and Business plans" }, { status: 403 });
   }
 
   const { id, clipId } = await params;

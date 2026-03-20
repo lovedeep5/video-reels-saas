@@ -51,7 +51,7 @@ export interface DbUser {
   clerk_id: string;
   email: string;
   name: string;
-  plan: "free" | "pro" | "business";
+  plan: "free" | "creator" | "pro" | "business";
   payment_customer_id?: string;
   payment_subscription_id?: string;
   payment_provider?: string;

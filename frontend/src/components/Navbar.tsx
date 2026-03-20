@@ -22,8 +22,8 @@ export default function Navbar() {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard/upload", label: "New Video" },
-    { href: "/dashboard/faceless", label: "Faceless" },
+    ...(meta?.is_admin ? [{ href: "/dashboard/upload", label: "YouTube Clips" }] : []),
+    { href: "/dashboard/faceless", label: "Create Video" },
     { href: "/dashboard/keys", label: "API Keys" },
     { href: "/billing", label: "Billing" },
     { href: "/dashboard/settings", label: "Settings" },

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { usersCol, ObjectId } from "@/lib/mongodb";
 
-const VALID_PLANS = ["free", "pro", "business"] as const;
+const VALID_PLANS = ["free", "creator", "pro", "business"] as const;
 type ValidPlan = (typeof VALID_PLANS)[number];
 
 export async function PATCH(
