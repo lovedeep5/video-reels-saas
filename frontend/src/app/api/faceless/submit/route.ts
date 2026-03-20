@@ -6,6 +6,7 @@ import { getPlan, BILLABLE_STATUSES } from "@/lib/plans";
 
 const VALID_STYLES = ["comic", "creepy-comic", "modern-cartoon", "disney", "ghibli", "anime", "painting", "dark-fantasy", "lego", "polaroid", "realistic", "fantastic"];
 const VALID_VOICES = ["jack", "emma", "andrew", "aria", "ryan", "sonia"];
+const VALID_SCRIPT_TYPES = ["story", "facts", "explainer", "listicle", "horror", "motivation"];
 const VALID_DURATIONS = [10, 15, 30, 60];
 const VALID_MUSIC = ["none", "happy-rhythm", "suspenseful", "peaceful", "epic-cinematic", "mysterious", "energetic"];
 const VALID_TEXT_STYLES = ["bold-stroke", "red-highlight", "karaoke", "sleek", "beast", "elegant"];
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     topic,
+    script_type = "story",
     style = "ghibli",
     voice = "andrew",
     duration = 30,
@@ -101,6 +103,7 @@ export async function POST(req: NextRequest) {
       clips_requested: 1,
       output_ratio: "9:16",
       faceless_topic: topic.trim(),
+      faceless_script_type: VALID_SCRIPT_TYPES.includes(script_type) ? script_type : "story",
       faceless_style: style,
       faceless_voice: voice,
       faceless_duration: duration,

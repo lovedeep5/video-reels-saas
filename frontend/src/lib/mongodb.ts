@@ -140,6 +140,7 @@ export interface DbJob {
   ec2_instance_id?: string;
   // Faceless video fields
   faceless_topic?: string;
+  faceless_script_type?: string;
   faceless_style?: string;
   faceless_voice?: string;
   faceless_duration?: number;

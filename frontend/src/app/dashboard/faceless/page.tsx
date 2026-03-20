@@ -5,6 +5,15 @@ import api, { youtubeApi, instagramApi, YouTubeStatus, InstagramStatus, ChannelI
 
 /* ── Data ────────────────────────────────────────────────────────────────── */
 
+const SCRIPT_TYPES = [
+  { id: "story", label: "Story", desc: "Narrative with beginning, middle, end", icon: "📖" },
+  { id: "facts", label: "Facts", desc: "\"Did you know...\" engaging facts", icon: "💡" },
+  { id: "explainer", label: "Explainer", desc: "How/why something works", icon: "🔍" },
+  { id: "listicle", label: "Top List", desc: "\"Top 5...\" countdown style", icon: "📋" },
+  { id: "horror", label: "Horror", desc: "Creepy narration, suspense build", icon: "👻" },
+  { id: "motivation", label: "Motivation", desc: "Inspirational, call-to-action", icon: "🔥" },
+];
+
 const CATEGORIES = [
   { id: "mythology", label: "Mythology & Legends", icon: "🏛️", topics: ["The Minotaur of Crete", "Thor vs the World Serpent", "The Story of Medusa"] },
   { id: "scary", label: "Scary Stories", icon: "👻", topics: ["The Haunted Lighthouse", "Whispers in the Walls", "The Shadow That Followed"] },
@@ -70,6 +79,7 @@ const DURATIONS = [
 export default function FacelessPage() {
   const router = useRouter();
 
+  const [scriptType, setScriptType] = useState("story");
   const [category, setCategory] = useState("");
   const [topic, setTopic] = useState("");
   const [style, setStyle] = useState("ghibli");
@@ -141,6 +151,7 @@ export default function FacelessPage() {
 
       const res = await api.post("/faceless/submit", {
         topic: topic.trim(),
+        script_type: scriptType,
         style,
         voice,
         music,
@@ -191,9 +202,30 @@ export default function FacelessPage() {
         <div className="mb-6 px-4 py-3 rounded-lg bg-red-900/50 border border-red-800 text-red-300 text-sm">{error}</div>
       )}
 
-      {/* ── 1. Category ───────────────────────────────────────────────────── */}
+      {/* ── 1. Script Type ──────────────────────────────────────────────── */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">1. Pick a Category</h2>
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">1. Script Type</h2>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          {SCRIPT_TYPES.map((st) => (
+            <button
+              key={st.id}
+              onClick={() => setScriptType(st.id)}
+              className={`flex flex-col items-center gap-1 px-3 py-3 rounded-lg text-xs font-medium transition-all border ${
+                scriptType === st.id
+                  ? "bg-indigo-900/60 border-indigo-500 text-white"
+                  : "bg-gray-900 border-gray-800 text-gray-400 hover:border-gray-600"
+              }`}
+            >
+              <span className="text-lg">{st.icon}</span>
+              <span>{st.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 2. Category ───────────────────────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">2. Pick a Category</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {CATEGORIES.map((cat) => (
             <button
@@ -234,7 +266,7 @@ export default function FacelessPage() {
         />
       </section>
 
-      {/* ── 2. Visual Style ───────────────────────────────────────────────── */}
+      {/* ── 3. Visual Style ───────────────────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">2. Visual Style</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -265,7 +297,7 @@ export default function FacelessPage() {
         </div>
       </section>
 
-      {/* ── 3. Voice ──────────────────────────────────────────────────────── */}
+      {/* ── 4. Voice ──────────────────────────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">3. Voice</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -287,7 +319,7 @@ export default function FacelessPage() {
         </div>
       </section>
 
-      {/* ── 4. Background Music ───────────────────────────────────────────── */}
+      {/* ── 5. Background Music ───────────────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
           4. Background Music <span className="text-gray-600 normal-case font-normal">Optional</span>
@@ -320,7 +352,7 @@ export default function FacelessPage() {
         </div>
       </section>
 
-      {/* ── 5. Text / Subtitle Style ──────────────────────────────────────── */}
+      {/* ── 6. Text / Subtitle Style ──────────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">5. Text Style</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -364,7 +396,7 @@ export default function FacelessPage() {
         </div>
       </section>
 
-      {/* ── 6. Duration & Count ───────────────────────────────────────────── */}
+      {/* ── 7. Duration & Count ───────────────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">6. Duration & Quantity</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

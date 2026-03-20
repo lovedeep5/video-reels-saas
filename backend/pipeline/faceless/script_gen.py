@@ -80,7 +80,17 @@ Write a single detailed image generation prompt that will produce a stunning ver
         return f"{scene_description}, {style_desc}, vertical portrait composition, tall format"
 
 
-def generate_script(topic: str, duration_seconds: int = 30, style: str = "ghibli") -> dict:
+SCRIPT_TYPE_INSTRUCTIONS = {
+    "story": "Write as a compelling NARRATIVE STORY with a clear beginning, rising tension, climax, and satisfying ending. Use dramatic storytelling language, paint vivid scenes, and make the listener feel like they're experiencing the events.",
+    "facts": "Write as an engaging FACTS video. Start each key fact with a hook like 'Did you know...' or 'Here's something terrifying...'. Make each fact surprising and memorable. End with a mind-blowing conclusion.",
+    "explainer": "Write as a clear EXPLAINER that breaks down HOW or WHY something works. Use simple analogies, build understanding step by step, and end with an 'aha moment' that ties everything together.",
+    "listicle": "Write as a TOP LIST countdown. Number each item. Start with the least impressive and build to the most shocking/interesting. Create suspense between items. End with '#1' being truly unforgettable.",
+    "horror": "Write as a HORROR/CREEPY narration. Build dread slowly. Use short, punchy sentences for tension. Describe unsettling details. Make the listener feel uneasy. End with a chilling twist or unresolved mystery.",
+    "motivation": "Write as a MOTIVATIONAL speech. Start with a relatable struggle. Build through overcoming obstacles. Use powerful, energetic language. End with a strong call-to-action that inspires immediate change.",
+}
+
+
+def generate_script(topic: str, duration_seconds: int = 30, style: str = "ghibli", script_type: str = "story") -> dict:
     """
     Generate a narration script with image prompts for each segment.
     Returns: {"title": str, "segments": [{"text": str, "duration": float, "image_prompt": str}]}
@@ -100,16 +110,20 @@ def generate_script(topic: str, duration_seconds: int = 30, style: str = "ghibli
         for _ in range(num_segments)
     ])
 
+    type_instruction = SCRIPT_TYPE_INSTRUCTIONS.get(script_type, SCRIPT_TYPE_INSTRUCTIONS["story"])
+
     prompt = f"""You are a professional short-form video scriptwriter. Write a captivating narration script for a {duration_seconds}-second faceless video about: "{topic}"
+
+SCRIPT STYLE: {type_instruction}
 
 Rules:
 - Split into exactly {num_segments} segments of ~{seg_dur}s each
 - Each segment: 1-2 compelling sentences
 - Total word count ~{duration_seconds * 2} words (roughly 2 words per second of speech)
-- Start with a strong hook to grab attention instantly
+- Start with an IRRESISTIBLE hook — the first 3 seconds must grab attention
 - Build tension/curiosity through the middle
-- End with a satisfying conclusion or call-to-action
-- Use vivid, descriptive language
+- End with a powerful conclusion that makes the viewer want more
+- Use vivid, descriptive, emotional language — write for the EAR not the eye
 
 For EACH segment, write a scene_description (NOT an image prompt) that describes what should be shown visually:
 - What is the main subject? (person, creature, object, landscape)

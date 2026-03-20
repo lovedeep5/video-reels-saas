@@ -149,6 +149,7 @@ def _faceless_pipeline(job: dict):
     import shutil
 
     topic = job.get("faceless_topic", "An amazing fact about the world")
+    script_type = job.get("faceless_script_type", "story")
     style = job.get("faceless_style", "ghibli")
     voice = job.get("faceless_voice", "andrew")
     duration = job.get("faceless_duration", 30)
@@ -160,7 +161,7 @@ def _faceless_pipeline(job: dict):
 
     # 1. Generate script
     update_job(status="processing", progress=5, progress_message="AI writing script...")
-    script = generate_script(topic=topic, duration_seconds=duration, style=style)
+    script = generate_script(topic=topic, duration_seconds=duration, style=style, script_type=script_type)
     video_title = script.get("title", topic[:50])
     jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {
         "video_title": video_title,
