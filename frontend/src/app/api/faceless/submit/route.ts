@@ -8,7 +8,7 @@ const VALID_STYLES = ["comic", "creepy-comic", "modern-cartoon", "disney", "ghib
 const VALID_VOICES = ["jack", "emma", "andrew", "aria", "ryan", "sonia"];
 const VALID_SCRIPT_TYPES = ["story", "facts", "explainer", "listicle", "horror", "motivation"];
 const VALID_DURATIONS = [10, 15, 30, 60];
-const VALID_MUSIC = ["none", "happy-rhythm", "suspenseful", "peaceful", "epic-cinematic", "mysterious", "energetic"];
+const VALID_MUSIC = ["none", "upbeat-happy", "epic-cinematic", "dark-suspense", "emotional-piano", "chill-lounge", "motivation-rock", "fantasy-orchestra", "dark-cyberpunk", "nature-ambient", "groovy-trap", "energetic-action", "slow-motion"];
 const VALID_TEXT_STYLES = ["bold-stroke", "red-highlight", "karaoke", "sleek", "beast", "elegant"];
 
 export async function POST(req: NextRequest) {

@@ -50,12 +50,18 @@ const VOICES = [
 
 const MUSIC_TRACKS = [
   { id: "none", label: "No Music", desc: "Voice narration only", color: "bg-gray-600", file: undefined },
-  { id: "happy-rhythm", label: "Happy Rhythm", desc: "Upbeat and energetic, perfect for positive content", color: "bg-amber-500", file: "/music/happy-rhythm.mp3" },
-  { id: "suspenseful", label: "Quiet Before Storm", desc: "Building tension and anticipation for dramatic reveals", color: "bg-indigo-500", file: "/music/suspenseful.mp3" },
-  { id: "peaceful", label: "Peaceful Vibes", desc: "Calm and soothing background for relaxed storytelling", color: "bg-emerald-500", file: "/music/peaceful.mp3" },
-  { id: "epic-cinematic", label: "Brilliant Symphony", desc: "Orchestral and majestic for epic storytelling", color: "bg-purple-500", file: "/music/epic-cinematic.mp3" },
-  { id: "mysterious", label: "Breathing Shadows", desc: "Mysterious and eerie ambiance for suspenseful videos", color: "bg-slate-500", file: "/music/mysterious.mp3" },
-  { id: "energetic", label: "High Energy", desc: "Fast-paced pulse for action-packed content", color: "bg-red-500", file: "/music/energetic.mp3" },
+  { id: "upbeat-happy", label: "Upbeat Happy", desc: "Cheerful corporate vibe, great for positive content", color: "bg-amber-500", file: "/music/upbeat-happy.mp3" },
+  { id: "epic-cinematic", label: "Epic Cinematic", desc: "Inspiring orchestral, perfect for dramatic storytelling", color: "bg-purple-500", file: "/music/epic-cinematic.mp3" },
+  { id: "dark-suspense", label: "Dark Suspense", desc: "Tension-building atmosphere for horror and mystery", color: "bg-slate-600", file: "/music/dark-suspense.mp3" },
+  { id: "emotional-piano", label: "Emotional Piano", desc: "Soft piano melody for heartfelt and calm narration", color: "bg-sky-500", file: "/music/emotional-piano.mp3" },
+  { id: "chill-lounge", label: "Chill Lounge", desc: "Stylish and relaxed, ideal for lifestyle content", color: "bg-emerald-500", file: "/music/chill-lounge.mp3" },
+  { id: "motivation-rock", label: "Motivation Rock", desc: "Powerful rock trailer energy for motivational videos", color: "bg-red-500", file: "/music/motivation-rock.mp3" },
+  { id: "fantasy-orchestra", label: "Fantasy Orchestra", desc: "Magical wizard-school orchestral for mythology and fantasy", color: "bg-violet-500", file: "/music/fantasy-orchestra.mp3" },
+  { id: "dark-cyberpunk", label: "Dark Cyberpunk", desc: "Electronic dystopian beats for sci-fi and tech topics", color: "bg-cyan-600", file: "/music/dark-cyberpunk.mp3" },
+  { id: "nature-ambient", label: "Nature Ambient", desc: "Organic new-age soundscape for nature and science", color: "bg-green-600", file: "/music/nature-ambient.mp3" },
+  { id: "groovy-trap", label: "Groovy Trap", desc: "Bass-heavy groovy beat for trendy urban content", color: "bg-pink-500", file: "/music/groovy-trap.mp3" },
+  { id: "energetic-action", label: "Energetic Action", desc: "Fast-paced sports energy for action-packed content", color: "bg-orange-500", file: "/music/energetic-action.mp3" },
+  { id: "slow-motion", label: "Slow Motion", desc: "Ambient lounge, dreamy and reflective mood", color: "bg-indigo-400", file: "/music/slow-motion.mp3" },
 ];
 
 const DURATIONS = [
@@ -383,39 +389,63 @@ export default function FacelessPage() {
           {/* Step 3: Music */}
           {step === 3 && (
             <div>
+              <style>{`
+                @keyframes wave1 { 0%,100% { height: 4px; } 50% { height: 16px; } }
+                @keyframes wave2 { 0%,100% { height: 8px; } 50% { height: 20px; } }
+                @keyframes wave3 { 0%,100% { height: 12px; } 50% { height: 6px; } }
+                @keyframes wave4 { 0%,100% { height: 6px; } 50% { height: 18px; } }
+                .wave-bar { width: 3px; border-radius: 2px; background: currentColor; }
+                .wave-1 { animation: wave1 0.8s ease-in-out infinite; }
+                .wave-2 { animation: wave2 0.6s ease-in-out infinite 0.1s; }
+                .wave-3 { animation: wave3 0.7s ease-in-out infinite 0.2s; }
+                .wave-4 { animation: wave4 0.5s ease-in-out infinite 0.15s; }
+              `}</style>
               <p className="text-sm text-gray-400 mb-4">Choose background music for your video</p>
               <div className="space-y-2">
-                {MUSIC_TRACKS.map((m) => (
-                  <button key={m.id} onClick={() => setMusic(m.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
-                      music === m.id ? "border-indigo-500 bg-indigo-950/20" : "border-gray-800 hover:border-gray-700"
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-lg ${m.color} shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white">{m.label}</p>
-                      <p className="text-xs text-gray-500 truncate">{m.desc}</p>
-                    </div>
-                    {m.file && (
-                      <button onClick={(e) => { e.stopPropagation(); playAudio(`m-${m.id}`, m.file!); }}
-                        className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center shrink-0 transition-colors"
-                      >
-                        {playingAudio === `m-${m.id}` ? (
-                          <svg className="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-                        ) : (
-                          <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        )}
-                      </button>
-                    )}
-                    {music === m.id && (
-                      <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                {MUSIC_TRACKS.map((m) => {
+                  const isPlaying = playingAudio === `m-${m.id}`;
+                  return (
+                    <button key={m.id} onClick={() => setMusic(m.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                        music === m.id ? "border-indigo-500 bg-indigo-950/20" : "border-gray-800 hover:border-gray-700"
+                      }`}
+                    >
+                      {/* Color swatch or wave animation */}
+                      <div className={`w-10 h-10 rounded-lg ${m.color} shrink-0 flex items-end justify-center gap-[3px] pb-1.5`}>
+                        {isPlaying ? (
+                          <>
+                            <div className="wave-bar wave-1 text-white" style={{ height: 4 }} />
+                            <div className="wave-bar wave-2 text-white" style={{ height: 8 }} />
+                            <div className="wave-bar wave-3 text-white" style={{ height: 12 }} />
+                            <div className="wave-bar wave-4 text-white" style={{ height: 6 }} />
+                          </>
+                        ) : null}
                       </div>
-                    )}
-                  </button>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white">{m.label}</p>
+                        <p className="text-xs text-gray-500 truncate">{m.desc}</p>
+                      </div>
+                      {m.file && (
+                        <button onClick={(e) => { e.stopPropagation(); playAudio(`m-${m.id}`, m.file!); }}
+                          className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center shrink-0 transition-colors"
+                        >
+                          {isPlaying ? (
+                            <svg className="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                          )}
+                        </button>
+                      )}
+                      {music === m.id && (
+                        <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
