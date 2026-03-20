@@ -1,4 +1,4 @@
-"""Generate a short narration script + image prompts using OpenRouter."""
+"""Generate a short narration script + detailed image prompts using OpenRouter."""
 
 import os
 import json
@@ -56,12 +56,35 @@ def _call_openrouter(messages: list, max_tokens: int = 800) -> str:
     raise RuntimeError("All models failed")
 
 
+def _enhance_image_prompt(scene_description: str, style: str, style_desc: str) -> str:
+    """Use LLM to generate a detailed, Flux-optimized image prompt for one scene."""
+    prompt = f"""You are an expert at writing prompts for AI image generation (Flux model).
+
+Given this scene description: "{scene_description}"
+Art style: {style}
+
+Write a single detailed image generation prompt that will produce a stunning vertical portrait image. Rules:
+- Describe the EXACT visual scene: subject, setting, lighting, mood, colors, composition
+- The image must work in VERTICAL PORTRAIT orientation (9:16 tall format) — compose subjects centered vertically
+- Include specific visual details (textures, materials, atmosphere)
+- Include this style at the end: {style_desc}
+- Add "vertical portrait composition, tall format" at the end
+- Keep it under 100 words
+- Return ONLY the prompt text, nothing else"""
+
+    try:
+        result = _call_openrouter([{"role": "user", "content": prompt}], max_tokens=200)
+        return result.strip().strip('"').strip("'")
+    except Exception as e:
+        print(f"[ScriptGen] Image prompt enhancement failed: {e}")
+        return f"{scene_description}, {style_desc}, vertical portrait composition, tall format"
+
+
 def generate_script(topic: str, duration_seconds: int = 30, style: str = "ghibli") -> dict:
     """
     Generate a narration script with image prompts for each segment.
     Returns: {"title": str, "segments": [{"text": str, "duration": float, "image_prompt": str}]}
     """
-    # Scale segments based on duration
     if duration_seconds <= 15:
         num_segments = 3
     elif duration_seconds <= 30:
@@ -73,7 +96,7 @@ def generate_script(topic: str, duration_seconds: int = 30, style: str = "ghibli
     style_desc = STYLE_PROMPTS.get(style, STYLE_PROMPTS["ghibli"])
 
     segments_json = ", ".join([
-        f'{{"text": "narration text", "duration": {seg_dur}, "image_prompt": "detailed visual scene description"}}'
+        f'{{"text": "narration text", "duration": {seg_dur}, "scene_description": "brief visual scene description"}}'
         for _ in range(num_segments)
     ])
 
@@ -88,18 +111,17 @@ Rules:
 - End with a satisfying conclusion or call-to-action
 - Use vivid, descriptive language
 
-For EACH segment, also write an image_prompt that describes a visual scene. The image_prompt should:
-- Describe the scene visually (subjects, setting, mood, colors, composition)
-- Include this style: "{style_desc}"
-- Be specific enough to generate a beautiful, unique image
-- Each scene should visually differ from the others
+For EACH segment, write a scene_description (NOT an image prompt) that describes what should be shown visually:
+- What is the main subject? (person, creature, object, landscape)
+- What is the setting? (location, time of day, weather)
+- What is the mood? (dark, bright, peaceful, intense)
+- Keep it to 1-2 sentences describing the visual scene
 
 Return ONLY valid JSON, no markdown, no code blocks:
 {{"title": "short catchy title", "segments": [{segments_json}]}}"""
 
     content = _call_openrouter([{"role": "user", "content": prompt}], max_tokens=1200)
 
-    # Clean up potential markdown code fences
     content = content.strip()
     if content.startswith("```"):
         content = content.split("\n", 1)[1]
@@ -108,10 +130,12 @@ Return ONLY valid JSON, no markdown, no code blocks:
 
     script = json.loads(content)
 
-    # Inject style into image prompts if not already present
-    for seg in script["segments"]:
-        if style_desc.split(",")[0].lower() not in seg["image_prompt"].lower():
-            seg["image_prompt"] = f'{seg["image_prompt"]}, {style_desc}'
+    # Enhance each scene_description into a detailed Flux image prompt
+    print(f"[ScriptGen] Enhancing {len(script['segments'])} image prompts for style: {style}...")
+    for i, seg in enumerate(script["segments"]):
+        scene = seg.pop("scene_description", seg.get("image_prompt", ""))
+        seg["image_prompt"] = _enhance_image_prompt(scene, style, style_desc)
+        print(f"  Prompt {i+1}: {seg['image_prompt'][:100]}...")
 
     print(f"[ScriptGen] Generated: {script['title']} ({len(script['segments'])} segments)")
     for i, seg in enumerate(script["segments"]):

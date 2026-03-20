@@ -62,6 +62,20 @@ def _generate_one(prompt: str, output_path: str, index: int, retries: int = 2) -
                 f.write(img_bytes)
 
             img = Image.open(raw_path).convert("RGB")
+            # Center-crop to 9:16 portrait ratio, then resize to video dimensions
+            w, h = img.size
+            target_ratio = VIDEO_WIDTH / VIDEO_HEIGHT  # 9/16 = 0.5625
+            current_ratio = w / h
+            if current_ratio > target_ratio:
+                # Image is wider than target — crop width
+                new_w = int(h * target_ratio)
+                left = (w - new_w) // 2
+                img = img.crop((left, 0, left + new_w, h))
+            else:
+                # Image is taller — crop height
+                new_h = int(w / target_ratio)
+                top = (h - new_h) // 2
+                img = img.crop((0, top, w, top + new_h))
             img = img.resize((VIDEO_WIDTH, VIDEO_HEIGHT), Image.Resampling.LANCZOS)
             img.save(output_path, "JPEG", quality=92)
             os.remove(raw_path)

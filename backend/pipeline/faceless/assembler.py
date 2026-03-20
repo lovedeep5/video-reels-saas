@@ -1,12 +1,10 @@
-"""Assemble faceless video: AI backgrounds + text overlay + audio narration.
+"""Assemble faceless video: AI backgrounds + subtitle overlay + audio narration.
 
 - Background images: slow Ken Burns zoom + crossfade transitions
-- Text overlay: stable, centered, no zoom
-- Subtitles: word-by-word animated captions (Instagram/TikTok style)
+- Subtitles: bottom-positioned, 2 lines max, clean readable captions
 """
 
 import os
-import textwrap
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from moviepy import (
@@ -20,15 +18,18 @@ WIDTH = 1080
 HEIGHT = 1920
 CROSSFADE = 0.6
 
+# Subtitle config — max 2 lines, ~4 words per line
+MAX_WORDS_PER_LINE = 4
+MAX_LINES = 2
+WORDS_PER_CHUNK = MAX_WORDS_PER_LINE * MAX_LINES  # 8 words shown at a time
+
 
 def _get_font(size: int):
-    """Get a font — tries common paths on Linux (EC2) and Windows."""
+    """Get a bold font — tries common paths on Linux (EC2) and Windows."""
     font_paths = [
-        # Linux (EC2 Ubuntu)
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/ubuntu/Ubuntu-Bold.ttf",
-        # Windows
         "C:/Windows/Fonts/arialbd.ttf",
         "C:/Windows/Fonts/arial.ttf",
     ]
@@ -38,87 +39,107 @@ def _get_font(size: int):
     return ImageFont.load_default(size)
 
 
-def _create_text_overlay(
-    text: str, title: str = "", seg_index: int = 0, total_segs: int = 3
+def _split_into_chunks(text: str) -> list:
+    """Split narration text into display chunks of ~8 words (2 lines x 4 words)."""
+    words = text.split()
+    chunks = []
+    for i in range(0, len(words), WORDS_PER_CHUNK):
+        chunk_words = words[i:i + WORDS_PER_CHUNK]
+        # Split chunk into 2 lines
+        mid = min(MAX_WORDS_PER_LINE, len(chunk_words))
+        line1 = " ".join(chunk_words[:mid])
+        line2 = " ".join(chunk_words[mid:]) if len(chunk_words) > mid else ""
+        chunks.append((line1, line2))
+    return chunks if chunks else [("", "")]
+
+
+def _create_subtitle_frame(
+    line1: str, line2: str, title: str = "",
+    seg_index: int = 0, total_segs: int = 3
 ) -> np.ndarray:
-    """Create a transparent text overlay (RGBA numpy array)."""
+    """Create a transparent subtitle overlay frame."""
     img = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Semi-transparent dark strip behind text for readability
-    strip_y = HEIGHT // 2 - 160
-    strip_h = 320
-    draw.rounded_rectangle(
-        [(40, strip_y), (WIDTH - 40, strip_y + strip_h)],
-        radius=20,
-        fill=(0, 0, 0, 150),
-    )
+    # Bottom gradient for readability
+    grad_top = HEIGHT - 400
+    for y in range(grad_top, HEIGHT):
+        alpha = int(160 * ((y - grad_top) / (HEIGHT - grad_top)) ** 0.7)
+        draw.line([(0, y), (WIDTH, y)], fill=(0, 0, 0, alpha))
 
-    # Title at top
+    # Title at top-left with accent bar
     if title:
-        title_font = _get_font(42)
-        # Shadow
-        draw.text(
-            (WIDTH // 2 + 2, 102),
-            title.upper(),
-            font=title_font,
-            fill=(0, 0, 0, 200),
-            anchor="mm",
+        title_font = _get_font(28)
+        draw.rounded_rectangle(
+            [(40, 65), (44, 95)], radius=2, fill=(255, 200, 60, 255)
         )
         draw.text(
-            (WIDTH // 2, 100),
-            title.upper(),
-            font=title_font,
-            fill=(255, 220, 100, 255),
-            anchor="mm",
+            (56, 80), title.upper(), font=title_font,
+            fill=(255, 255, 255, 200), anchor="lm",
         )
 
-    # Main narration text — centered, wrapped
-    main_font = _get_font(56)
-    wrapped = textwrap.fill(text, width=26)
-    lines = wrapped.split("\n")
-    line_height = 72
+    # Subtitle text — 2 lines at bottom
+    sub_font = _get_font(52)
+    line_height = 68
+    base_y = HEIGHT - 240
 
-    y_start = HEIGHT // 2 - (len(lines) * line_height) // 2
-    for i, line in enumerate(lines):
-        y = y_start + i * line_height
-        # Shadow layers for depth
-        for ox, oy in [(3, 3), (2, 2)]:
+    for idx, line in enumerate([line1, line2]):
+        if not line:
+            continue
+        y = base_y + idx * line_height
+        # Strong shadow for readability on any background
+        for ox, oy in [(3, 3), (-1, -1), (2, 0), (0, 2)]:
             draw.text(
-                (WIDTH // 2 + ox, y + oy),
-                line,
-                font=main_font,
-                fill=(0, 0, 0, 200),
-                anchor="mm",
+                (WIDTH // 2 + ox, y + oy), line, font=sub_font,
+                fill=(0, 0, 0, 220), anchor="mm",
             )
         draw.text(
-            (WIDTH // 2, y), line, font=main_font, fill=(255, 255, 255, 255), anchor="mm"
+            (WIDTH // 2, y), line, font=sub_font,
+            fill=(255, 255, 255, 255), anchor="mm",
         )
 
-    # Progress dots at bottom
-    dot_y = HEIGHT - 180
-    dot_spacing = 40
+    # Progress dots at very bottom
+    dot_y = HEIGHT - 80
+    dot_spacing = 30
     start_x = WIDTH // 2 - (total_segs - 1) * dot_spacing // 2
     for d in range(total_segs):
         dx = start_x + d * dot_spacing
-        color = (255, 220, 100, 255) if d == seg_index else (255, 255, 255, 80)
-        draw.ellipse([(dx - 8, dot_y - 8), (dx + 8, dot_y + 8)], fill=color)
+        if d == seg_index:
+            draw.rounded_rectangle(
+                [(dx - 10, dot_y - 3), (dx + 10, dot_y + 3)],
+                radius=3, fill=(255, 200, 60, 255),
+            )
+        else:
+            draw.ellipse(
+                [(dx - 3, dot_y - 3), (dx + 3, dot_y + 3)],
+                fill=(255, 255, 255, 60),
+            )
 
     return np.array(img)
 
 
-def _create_text_clip(
-    text: str, duration: float, title: str = "", seg_index: int = 0, total_segs: int = 3
-) -> ImageClip:
-    """Create a stable text overlay clip."""
-    overlay = _create_text_overlay(text, title, seg_index, total_segs)
-    return ImageClip(overlay, duration=duration, is_mask=False)
+def _create_subtitle_clips(
+    text: str, total_duration: float, title: str = "",
+    seg_index: int = 0, total_segs: int = 3
+) -> list:
+    """Create multiple subtitle clips that cycle through text chunks over the segment duration."""
+    chunks = _split_into_chunks(text)
+    chunk_dur = total_duration / len(chunks)
+
+    clips = []
+    for i, (line1, line2) in enumerate(chunks):
+        frame = _create_subtitle_frame(line1, line2, title, seg_index, total_segs)
+        clip = ImageClip(frame, duration=chunk_dur, is_mask=False)
+        clip = clip.with_start(i * chunk_dur)
+        clips.append(clip)
+
+    return clips
 
 
 def _create_bg_clip(image_path: str, duration: float) -> ImageClip:
     """Background image with slow Ken Burns zoom."""
     clip = ImageClip(image_path, duration=duration)
-    clip = clip.resized(lambda t, d=duration: 1.0 + 0.08 * (t / d))
+    clip = clip.resized(lambda t, d=duration: 1.0 + 0.06 * (t / d))
     return clip
 
 
@@ -127,7 +148,7 @@ def _fade_in(get_frame, t, fade_duration):
     frame = get_frame(t)
     if t < fade_duration:
         ratio = t / fade_duration
-        factor = ratio * ratio * (3 - 2 * ratio)  # smoothstep
+        factor = ratio * ratio * (3 - 2 * ratio)
         return (frame * factor).astype(np.uint8)
     return frame
 
@@ -142,7 +163,7 @@ def assemble_video(
     """
     Assemble faceless video:
     - AI-generated background images with Ken Burns zoom + crossfade
-    - Stable text overlay
+    - Word-chunked subtitle overlay (2 lines, 4 words each)
     - Audio narration
     """
     segment_clips = []
@@ -154,14 +175,16 @@ def assemble_video(
         audio = AudioFileClip(audio_path)
         dur = audio.duration
 
-        print(f"[Assembler] Segment {i+1}: {dur:.1f}s")
+        print(f"[Assembler] Segment {i+1}: {dur:.1f}s — \"{seg['text'][:60]}...\"")
 
         bg_clip = _create_bg_clip(img_path, dur)
-        text_clip = _create_text_clip(
+        sub_clips = _create_subtitle_clips(
             seg["text"], dur, title=title, seg_index=i, total_segs=total_segs
         )
 
-        composite = CompositeVideoClip([bg_clip, text_clip], size=(WIDTH, HEIGHT))
+        composite = CompositeVideoClip(
+            [bg_clip] + sub_clips, size=(WIDTH, HEIGHT)
+        )
         composite = composite.with_duration(dur)
         composite = composite.with_audio(audio)
         segment_clips.append(composite)
