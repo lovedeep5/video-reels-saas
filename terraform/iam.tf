@@ -119,6 +119,59 @@ resource "aws_iam_role_policy_attachment" "lambda_recovery" {
 }
 
 # ════════════════════════════════════════════════════════════════════════════
+# Lambda Scheduler — IAM
+# ════════════════════════════════════════════════════════════════════════════
+
+resource "aws_iam_role" "lambda_scheduler" {
+  name = "vidtoreels-lambda-scheduler"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_policy" "lambda_scheduler" {
+  name        = "vidtoreels-lambda-scheduler"
+  description = "Permissions for the VidToReels scheduler Lambda"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      # CloudWatch Logs
+      {
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      # SSM — read secrets (MongoDB URI, YouTube client ID/secret)
+      {
+        Effect   = "Allow"
+        Action   = "ssm:GetParameter"
+        Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/vidtoreels/*"
+      },
+      # S3 — download video files for YouTube upload, generate pre-signed URLs for Instagram
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject"]
+        Resource = "arn:aws:s3:::${var.s3_bucket}/*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_scheduler" {
+  role       = aws_iam_role.lambda_scheduler.name
+  policy_arn = aws_iam_policy.lambda_scheduler.arn
+}
+
+# ════════════════════════════════════════════════════════════════════════════
 # EC2 Worker — IAM
 # ════════════════════════════════════════════════════════════════════════════
 

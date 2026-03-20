@@ -21,6 +21,12 @@ data "archive_file" "recovery" {
   output_path = "${path.module}/../lambdas/recovery/recovery.zip"
 }
 
+data "archive_file" "scheduler" {
+  type        = "zip"
+  source_dir  = "${path.module}/../lambdas/scheduler/build"
+  output_path = "${path.module}/../lambdas/scheduler/scheduler.zip"
+}
+
 # ── CloudWatch Log Groups ────────────────────────────────────────────────────
 resource "aws_cloudwatch_log_group" "dispatcher" {
   name              = "/aws/lambda/vidtoreels-dispatcher"
@@ -130,4 +136,63 @@ resource "aws_lambda_permission" "recovery_eventbridge" {
   function_name = aws_lambda_function.recovery.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.recovery_schedule.arn
+}
+
+# ── Scheduler Lambda ───────────────────────────────────────────────────────
+resource "aws_cloudwatch_log_group" "scheduler" {
+  name              = "/aws/lambda/vidtoreels-scheduler"
+  retention_in_days = 30
+  tags              = local.common_tags
+}
+
+resource "aws_lambda_function" "scheduler" {
+  function_name    = "vidtoreels-scheduler"
+  description      = "Cron: publishes scheduled posts every 5 minutes"
+  filename         = data.archive_file.scheduler.output_path
+  source_code_hash = data.archive_file.scheduler.output_base64sha256
+  handler          = "handler.handler"
+  runtime          = "python3.11"
+  role             = aws_iam_role.lambda_scheduler.arn
+  timeout          = 300
+  memory_size      = 512
+
+  environment {
+    variables = {
+      AWS_REGION_NAME          = var.aws_region
+      MONGODB_URI_SSM_PATH     = aws_ssm_parameter.mongodb_uri.name
+      MONGODB_DB_NAME          = var.mongodb_db_name
+      S3_BUCKET                = var.s3_bucket
+      YOUTUBE_CLIENT_ID_SSM    = "/vidtoreels/YOUTUBE_CLIENT_ID"
+      YOUTUBE_CLIENT_SECRET_SSM = "/vidtoreels/YOUTUBE_CLIENT_SECRET"
+    }
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.scheduler,
+    aws_iam_role_policy_attachment.lambda_scheduler,
+  ]
+
+  tags = local.common_tags
+}
+
+# EventBridge → Scheduler (every 5 min)
+resource "aws_cloudwatch_event_rule" "scheduler_schedule" {
+  name                = "vidtoreels-scheduler-schedule"
+  description         = "Triggers the scheduler Lambda every 5 minutes"
+  schedule_expression = "rate(5 minutes)"
+  tags                = local.common_tags
+}
+
+resource "aws_cloudwatch_event_target" "scheduler" {
+  rule      = aws_cloudwatch_event_rule.scheduler_schedule.name
+  target_id = "vidtoreels-scheduler"
+  arn       = aws_lambda_function.scheduler.arn
+}
+
+resource "aws_lambda_permission" "scheduler_eventbridge" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.scheduler.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.scheduler_schedule.arn
 }

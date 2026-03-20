@@ -75,6 +75,14 @@ jobs:
             -t lambdas/recovery/build/
           cp lambdas/recovery/handler.py lambdas/recovery/build/
 
+      - name: Build Lambda — scheduler
+        run: |
+          mkdir -p lambdas/scheduler/build
+          pip install -q -r lambdas/scheduler/requirements.txt \
+            --platform manylinux2014_x86_64 --only-binary=:all: \
+            -t lambdas/scheduler/build/
+          cp lambdas/scheduler/handler.py lambdas/scheduler/build/
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:

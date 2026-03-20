@@ -110,6 +110,30 @@ resource "aws_ssm_parameter" "razorpay_webhook_secret" {
   lifecycle { prevent_destroy = true }
 }
 
+resource "aws_ssm_parameter" "youtube_client_id" {
+  name        = "/vidtoreels/YOUTUBE_CLIENT_ID"
+  description = "Google OAuth Client ID for YouTube publishing"
+  type        = "SecureString"
+  value       = "placeholder"
+  tags        = local.common_tags
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "youtube_client_secret" {
+  name        = "/vidtoreels/YOUTUBE_CLIENT_SECRET"
+  description = "Google OAuth Client Secret for YouTube publishing"
+  type        = "SecureString"
+  value       = "placeholder"
+  tags        = local.common_tags
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [value]
+  }
+}
+
 resource "aws_ssm_parameter" "youtube_cookies" {
   name        = "/vidtoreels/YOUTUBE_COOKIES"
   description = "Netscape-format YouTube cookies for yt-dlp (upload manually via AWS console)"
