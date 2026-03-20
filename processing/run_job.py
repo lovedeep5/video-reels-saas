@@ -162,7 +162,11 @@ def _faceless_pipeline(job: dict):
 
     # 1. Generate script
     update_job(status="processing", progress=5, progress_message="AI writing script...")
-    script = generate_script(topic=topic, duration_seconds=duration, style=style, script_type=script_type, variation_hint=variation_hint)
+    # Detect language from voice
+    hindi_voices = {"madhur", "swara", "bhoot"}
+    language = "Hindi" if voice in hindi_voices else "English"
+
+    script = generate_script(topic=topic, duration_seconds=duration, style=style, script_type=script_type, variation_hint=variation_hint, language=language)
     video_title = script.get("title", topic[:50])
     jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {
         "video_title": video_title,

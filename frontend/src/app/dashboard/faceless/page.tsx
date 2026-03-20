@@ -39,13 +39,31 @@ const STYLES = [
   { id: "fantastic", label: "Fantastic", image: "/styles/fantastic.webp" },
 ];
 
-const VOICES = [
-  { id: "jack", label: "Jack", desc: "Male · American · Deep", file: "/voices/jack.mp3" },
-  { id: "emma", label: "Emma", desc: "Female · American · Warm", file: "/voices/emma.mp3" },
-  { id: "andrew", label: "Andrew", desc: "Male · American · Natural", file: "/voices/andrew.mp3" },
-  { id: "aria", label: "Aria", desc: "Female · American · Expressive", file: "/voices/aria.mp3" },
-  { id: "ryan", label: "Ryan", desc: "Male · British · Dramatic", file: "/voices/ryan.mp3" },
-  { id: "sonia", label: "Sonia", desc: "Female · British · Elegant", file: "/voices/sonia.mp3" },
+const LANGUAGES = [
+  { id: "en", label: "English" },
+  { id: "hi", label: "Hindi" },
+  { id: "en-in", label: "Indian English" },
+];
+
+const ALL_VOICES = [
+  // English
+  { id: "jack", label: "Jack", desc: "Male · Deep narrator", lang: "en", bestFor: "Story, Facts, Explainer", file: "/voices/jack.mp3" },
+  { id: "emma", label: "Emma", desc: "Female · Warm", lang: "en", bestFor: "Story, Kids, Motivation", file: "/voices/emma.mp3" },
+  { id: "andrew", label: "Andrew", desc: "Male · Natural", lang: "en", bestFor: "Facts, Explainer", file: "/voices/andrew.mp3" },
+  { id: "aria", label: "Aria", desc: "Female · Expressive", lang: "en", bestFor: "Kids, Motivation", file: "/voices/aria.mp3" },
+  { id: "ryan", label: "Ryan", desc: "Male · British", lang: "en", bestFor: "Story, Explainer", file: "/voices/ryan.mp3" },
+  { id: "sonia", label: "Sonia", desc: "Female · British", lang: "en", bestFor: "Story, Motivation", file: "/voices/sonia.mp3" },
+  // English Horror
+  { id: "phantom", label: "Phantom", desc: "Male · Deep horror narrator", lang: "en", bestFor: "Horror", file: "/voices/jack.mp3" },
+  { id: "whisper", label: "Whisper", desc: "Female · Eerie and slow", lang: "en", bestFor: "Horror", file: "/voices/aria.mp3" },
+  { id: "shadow", label: "Shadow", desc: "Male · Very deep, chilling", lang: "en", bestFor: "Horror", file: "/voices/ryan.mp3" },
+  // Hindi
+  { id: "madhur", label: "Madhur", desc: "Male · Hindi narrator", lang: "hi", bestFor: "Story, Facts, Motivation", file: "/voices/andrew.mp3" },
+  { id: "swara", label: "Swara", desc: "Female · Hindi", lang: "hi", bestFor: "Story, Kids, Motivation", file: "/voices/emma.mp3" },
+  { id: "bhoot", label: "Bhoot", desc: "Male · Hindi horror", lang: "hi", bestFor: "Horror", file: "/voices/jack.mp3" },
+  // Indian English
+  { id: "prabhat", label: "Prabhat", desc: "Male · Indian English", lang: "en-in", bestFor: "Story, Facts, Explainer", file: "/voices/andrew.mp3" },
+  { id: "neerja", label: "Neerja", desc: "Female · Indian English", lang: "en-in", bestFor: "Story, Kids, Motivation", file: "/voices/emma.mp3" },
 ];
 
 const MUSIC_TRACKS = [
@@ -169,6 +187,7 @@ export default function FacelessPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
 
+  const [language, setLanguage] = useState("en");
   const [scriptType, setScriptType] = useState("story");
   const [category, setCategory] = useState("");
   const [topic, setTopic] = useState("");
@@ -352,6 +371,21 @@ export default function FacelessPage() {
               </div>
 
               <div>
+                <label className="text-xs text-gray-400 mb-2 block">Language</label>
+                <div className="flex gap-1.5">
+                  {LANGUAGES.map((l) => (
+                    <button key={l.id} onClick={() => setLanguage(l.id)}
+                      className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all border ${
+                        language === l.id
+                          ? "bg-indigo-600 border-indigo-600 text-white"
+                          : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600"
+                      }`}
+                    >{l.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <label className="text-xs text-gray-400 mb-2 block">Category</label>
                 <div className="flex flex-wrap gap-1.5">
                   {CATEGORIES.map((cat) => (
@@ -454,38 +488,52 @@ export default function FacelessPage() {
           {step === 2 && (
             <div>
               <p className="text-sm text-gray-400 mb-4">Pick the narrator voice</p>
-              <div className="space-y-2">
-                {VOICES.map((v) => (
-                  <button key={v.id} onClick={() => setVoice(v.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
-                      voice === v.id ? "border-indigo-500 bg-indigo-950/20" : "border-gray-800 hover:border-gray-700"
-                    }`}
-                  >
-                    {voice === v.id ? (
-                      <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-gray-700 shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white">{v.label}</p>
-                      <p className="text-xs text-gray-500">{v.desc}</p>
+              {/* Show voices for selected language, all visible */}
+              {LANGUAGES.filter(l => l.id === language || ALL_VOICES.some(v => v.lang === l.id)).map((lang) => {
+                const langVoices = ALL_VOICES.filter(v => v.lang === lang.id);
+                if (langVoices.length === 0) return null;
+                const isCurrentLang = lang.id === language;
+                return (
+                  <div key={lang.id} className={`mb-4 ${!isCurrentLang ? "opacity-50" : ""}`}>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-medium">{lang.label}</p>
+                    <div className="space-y-1.5">
+                      {langVoices.map((v) => (
+                        <button key={v.id} onClick={() => { setVoice(v.id); setLanguage(v.lang); }}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all text-left ${
+                            voice === v.id ? "border-indigo-500 bg-indigo-950/20" : "border-gray-800 hover:border-gray-700"
+                          }`}
+                        >
+                          {voice === v.id ? (
+                            <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full border-2 border-gray-700 shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-white">{v.label}</p>
+                              <span className="text-[10px] text-gray-600">{v.bestFor}</span>
+                            </div>
+                            <p className="text-xs text-gray-500">{v.desc}</p>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); playAudio(`v-${v.id}`, v.file); }}
+                            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center shrink-0 transition-colors"
+                          >
+                            {playingAudio === `v-${v.id}` ? (
+                              <svg className="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                            ) : (
+                              <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            )}
+                          </button>
+                        </button>
+                      ))}
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); playAudio(`v-${v.id}`, v.file); }}
-                      className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center shrink-0 transition-colors"
-                    >
-                      {playingAudio === `v-${v.id}` ? (
-                        <svg className="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-                      ) : (
-                        <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                      )}
-                    </button>
-                  </button>
-                ))}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -646,7 +694,7 @@ export default function FacelessPage() {
                 {[
                   ["Topic", selectedTopics.length > 1 ? `${selectedTopics.length} topics (rotating daily)` : (topic.trim() || selectedTopics[0] || "—")],
                   ["Style", selectedStyle?.label],
-                  ["Voice", VOICES.find(v => v.id === voice)?.label],
+                  ["Voice", ALL_VOICES.find(v => v.id === voice)?.label],
                   ["Duration", `${duration}s`],
                   ["Schedule", scheduleMode === "daily" ? `Daily at ${String(dailyHour).padStart(2, "0")}:00 UTC` : new Date(scheduleDate).toLocaleString()],
                 ].map(([label, value]) => (
