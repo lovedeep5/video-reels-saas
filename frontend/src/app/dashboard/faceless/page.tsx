@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import api, { youtubeApi, instagramApi, ChannelInfo } from "@/lib/api";
+import api, { youtubeApi, instagramApi, automationsApi, ChannelInfo } from "@/lib/api";
 
 /* ── Data ────────────────────────────────────────────────────────────────── */
 
@@ -154,7 +154,14 @@ function StyleCarousel({ style, setStyle }: { style: string; setStyle: (s: strin
 }
 
 const TOTAL_STEPS = 5;
-const STEP_TITLES = ["Topic & Script", "Art Style", "Voice", "Background Music", "Generate"];
+const STEP_TITLES = ["Topic & Script", "Art Style", "Voice", "Background Music", "Schedule"];
+
+const SCHEDULE_MODES = [
+  { id: "once", label: "One-time", desc: "Schedule for a specific date & time" },
+  { id: "daily", label: "Daily", desc: "Repeats every day at the same time" },
+];
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 /* ── Page ────────────────────────────────────────────────────────────────── */
 
@@ -169,6 +176,14 @@ export default function FacelessPage() {
   const [voice, setVoice] = useState("andrew");
   const [music, setMusic] = useState("none");
   const [duration, setDuration] = useState(30);
+
+  const [scheduleMode, setScheduleMode] = useState<"once" | "daily">("once");
+  const [scheduleDate, setScheduleDate] = useState(() => {
+    const d = new Date(Date.now() + 3600_000);
+    return d.toISOString().slice(0, 16);
+  });
+  const [dailyHour, setDailyHour] = useState(10);
+  const [dailyTopics, setDailyTopics] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -217,25 +232,51 @@ export default function FacelessPage() {
   }
 
   async function handleSubmit() {
-    if (!topic.trim()) { setError("Please enter a topic"); return; }
     setError("");
-    setSubmitting(true);
-    try {
-      const platforms: { platform: string; channel_id: string }[] = [];
-      if (autoPublish) {
-        if (autoYt && autoYtChannel) platforms.push({ platform: "youtube", channel_id: autoYtChannel });
-        if (autoIg && autoIgChannel) platforms.push({ platform: "instagram", channel_id: autoIgChannel });
+
+    const platforms: { platform: string; channel_id: string }[] = [];
+    if (autoYt && autoYtChannel) platforms.push({ platform: "youtube", channel_id: autoYtChannel });
+    if (autoIg && autoIgChannel) platforms.push({ platform: "instagram", channel_id: autoIgChannel });
+
+    if (scheduleMode === "daily") {
+      // Create automation (daily recurring)
+      const topics = dailyTopics.trim()
+        ? dailyTopics.split("\n").map((t) => t.trim()).filter(Boolean)
+        : [topic.trim()];
+      if (topics.length === 0 || !topics[0]) { setError("Enter at least 1 topic"); return; }
+      if (platforms.length === 0) { setError("Select at least 1 channel to publish to"); return; }
+
+      setSubmitting(true);
+      try {
+        await automationsApi.create({
+          name: topics[0].slice(0, 40),
+          topics,
+          script_type: scriptType, style, voice, music, duration,
+          post_hour: dailyHour,
+          platforms,
+          visibility: autoVisibility,
+        });
+        router.push("/dashboard/automations");
+      } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        setError(e.response?.data?.error || "Failed to create automation.");
+        setSubmitting(false);
       }
-      const res = await api.post("/faceless/submit", {
-        topic: topic.trim(), script_type: scriptType, style, voice, music,
-        text_style: "bold-stroke", duration, count: 1,
-        ...(platforms.length > 0 ? { auto_publish: { platforms, visibility: autoVisibility } } : {}),
-      });
-      const jobIds: string[] = res.data.job_ids;
-      router.push(jobIds.length === 1 ? `/dashboard/jobs/${jobIds[0]}` : "/dashboard");
-    } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      setError(e.response?.data?.error || "Failed to create video. Try again.");
-      setSubmitting(false);
+    } else {
+      // One-time scheduled video
+      if (!topic.trim()) { setError("Please enter a topic"); return; }
+      setSubmitting(true);
+      try {
+        const res = await api.post("/faceless/submit", {
+          topic: topic.trim(), script_type: scriptType, style, voice, music,
+          text_style: "bold-stroke", duration, count: 1,
+          ...(platforms.length > 0 ? { auto_publish: { platforms, visibility: autoVisibility } } : {}),
+        });
+        const jobIds: string[] = res.data.job_ids;
+        router.push(jobIds.length === 1 ? `/dashboard/jobs/${jobIds[0]}` : "/dashboard");
+      } catch (e: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        setError(e.response?.data?.error || "Failed to schedule video.");
+        setSubmitting(false);
+      }
     }
   }
 
@@ -450,19 +491,110 @@ export default function FacelessPage() {
             </div>
           )}
 
-          {/* Step 4: Generate */}
+          {/* Step 4: Schedule */}
           {step === 4 && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-400 mb-2">Review your settings and generate</p>
+              {/* Schedule mode selector */}
+              <div>
+                <label className="text-xs text-gray-400 mb-2 block">Schedule type</label>
+                <div className="flex gap-2">
+                  {SCHEDULE_MODES.map((m) => (
+                    <button key={m.id} onClick={() => setScheduleMode(m.id as "once" | "daily")}
+                      className={`flex-1 px-4 py-3 rounded-lg border text-left transition-all ${
+                        scheduleMode === m.id ? "border-indigo-500 bg-indigo-950/20" : "border-gray-800 hover:border-gray-700"
+                      }`}
+                    >
+                      <p className="text-sm font-medium text-white">{m.label}</p>
+                      <p className="text-xs text-gray-500">{m.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 space-y-3">
+              {/* One-time: date/time picker */}
+              {scheduleMode === "once" && (
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Publish at</label>
+                  <input type="datetime-local" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+                </div>
+              )}
+
+              {/* Daily: hour picker + extra topics */}
+              {scheduleMode === "daily" && (
+                <>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Post every day at (UTC)</label>
+                    <select value={dailyHour} onChange={(e) => setDailyHour(Number(e.target.value))}
+                      className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2.5 text-sm text-white">
+                      {HOURS.map((h) => {
+                        const d = new Date(); d.setUTCHours(h, 0, 0, 0);
+                        const local = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                        return <option key={h} value={h}>{String(h).padStart(2, "0")}:00 UTC ({local} local)</option>;
+                      })}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Topics (one per line — rotates daily)</label>
+                    <textarea value={dailyTopics} onChange={(e) => setDailyTopics(e.target.value)} rows={4}
+                      placeholder={topic ? `${topic}\nAnother topic for day 2\nDay 3 topic...` : "Topic for day 1\nTopic for day 2\nTopic for day 3"}
+                      className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 resize-none" />
+                    <p className="text-[10px] text-gray-600 mt-1">
+                      {(dailyTopics.trim() ? dailyTopics.split("\n").filter((t) => t.trim()).length : (topic.trim() ? 1 : 0))} topics — uses current topic if left empty
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Publish to channels */}
+              {(ytChannels.length > 0 || igChannels.length > 0) && (
+                <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+                  <p className="text-sm font-medium text-white mb-3">Publish to</p>
+                  <div className="space-y-2">
+                    {ytChannels.length > 0 && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={autoYt} onChange={(e) => setAutoYt(e.target.checked)} className="rounded bg-gray-800 border-gray-700 text-red-600" />
+                        <span className="text-gray-300">YouTube</span>
+                        {ytChannels.length > 1 && (
+                          <select value={autoYtChannel} onChange={(e) => setAutoYtChannel(e.target.value)} className="ml-auto bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-white">
+                            {ytChannels.map((ch) => <option key={ch.id} value={ch.id}>{ch.account_name}</option>)}
+                          </select>
+                        )}
+                      </label>
+                    )}
+                    {igChannels.length > 0 && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={autoIg} onChange={(e) => setAutoIg(e.target.checked)} className="rounded bg-gray-800 border-gray-700 text-pink-600" />
+                        <span className="text-gray-300">Instagram</span>
+                        {igChannels.length > 1 && (
+                          <select value={autoIgChannel} onChange={(e) => setAutoIgChannel(e.target.value)} className="ml-auto bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-white">
+                            {igChannels.map((ch) => <option key={ch.id} value={ch.id}>{ch.account_name}</option>)}
+                          </select>
+                        )}
+                      </label>
+                    )}
+                    {autoYt && (
+                      <div className="flex items-center gap-2 pl-5">
+                        <span className="text-xs text-gray-500">Visibility</span>
+                        <select value={autoVisibility} onChange={(e) => setAutoVisibility(e.target.value)} className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-white">
+                          <option value="public">Public</option>
+                          <option value="unlisted">Unlisted</option>
+                          <option value="private">Private</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Summary */}
+              <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 space-y-2">
                 {[
-                  ["Topic", topic],
-                  ["Format", SCRIPT_TYPES.find(s => s.id === scriptType)?.label],
+                  ["Topic", scheduleMode === "daily" ? `${(dailyTopics.trim() ? dailyTopics.split("\n").filter(t => t.trim()).length : 1)} topics (rotating)` : topic],
                   ["Style", selectedStyle?.label],
                   ["Voice", VOICES.find(v => v.id === voice)?.label],
-                  ["Music", MUSIC_TRACKS.find(m => m.id === music)?.label],
                   ["Duration", `${duration}s`],
+                  ["Schedule", scheduleMode === "daily" ? `Daily at ${String(dailyHour).padStart(2, "0")}:00 UTC` : new Date(scheduleDate).toLocaleString()],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between text-sm">
                     <span className="text-gray-500">{label}</span>
@@ -471,64 +603,9 @@ export default function FacelessPage() {
                 ))}
               </div>
 
-              {/* Auto-post */}
-              {(ytChannels.length > 0 || igChannels.length > 0) && (
-                <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-white">Auto-post when ready</p>
-                      <p className="text-xs text-gray-500">Publish automatically after creation</p>
-                    </div>
-                    <button onClick={() => setAutoPublish(!autoPublish)}
-                      className={`relative w-9 h-5 rounded-full transition-colors ${autoPublish ? "bg-indigo-600" : "bg-gray-700"}`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${autoPublish ? "left-[18px]" : "left-0.5"}`} />
-                    </button>
-                  </div>
-                  {autoPublish && (
-                    <div className="mt-3 pt-3 border-t border-gray-800 space-y-2">
-                      {ytChannels.length > 0 && (
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" checked={autoYt} onChange={(e) => setAutoYt(e.target.checked)} className="rounded bg-gray-800 border-gray-700 text-red-600" />
-                          <span className="text-gray-300">YouTube</span>
-                          {ytChannels.length > 1 && (
-                            <select value={autoYtChannel} onChange={(e) => setAutoYtChannel(e.target.value)} className="ml-auto bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-white">
-                              {ytChannels.map((ch) => <option key={ch.id} value={ch.id}>{ch.account_name}</option>)}
-                            </select>
-                          )}
-                        </label>
-                      )}
-                      {igChannels.length > 0 && (
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" checked={autoIg} onChange={(e) => setAutoIg(e.target.checked)} className="rounded bg-gray-800 border-gray-700 text-pink-600" />
-                          <span className="text-gray-300">Instagram</span>
-                          {igChannels.length > 1 && (
-                            <select value={autoIgChannel} onChange={(e) => setAutoIgChannel(e.target.value)} className="ml-auto bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-white">
-                              {igChannels.map((ch) => <option key={ch.id} value={ch.id}>{ch.account_name}</option>)}
-                            </select>
-                          )}
-                        </label>
-                      )}
-                      {autoYt && (
-                        <div className="flex items-center gap-2 pl-5">
-                          <span className="text-xs text-gray-500">Visibility</span>
-                          <select value={autoVisibility} onChange={(e) => setAutoVisibility(e.target.value)} className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-white">
-                            <option value="public">Public</option>
-                            <option value="unlisted">Unlisted</option>
-                            <option value="private">Private</option>
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <button onClick={handleSubmit} disabled={submitting || !topic.trim()}
+              <button onClick={handleSubmit} disabled={submitting}
                 className={`w-full py-3.5 rounded-lg text-sm font-semibold transition-all ${
-                  submitting || !topic.trim()
-                    ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                    : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                  submitting ? "bg-gray-800 text-gray-500 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-500 text-white"
                 }`}
               >
                 {submitting ? (
@@ -537,11 +614,13 @@ export default function FacelessPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Creating video...
+                    {scheduleMode === "daily" ? "Setting up automation..." : "Scheduling video..."}
                   </span>
-                ) : "Generate Video"}
+                ) : scheduleMode === "daily" ? "Start Daily Automation" : "Schedule Video"}
               </button>
-              <p className="text-center text-xs text-gray-600">1 credit per video</p>
+              <p className="text-center text-xs text-gray-600">
+                {scheduleMode === "daily" ? "1 credit per day, runs automatically" : "1 credit per video"}
+              </p>
             </div>
           )}
 
