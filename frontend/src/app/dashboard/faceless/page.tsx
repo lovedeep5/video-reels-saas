@@ -268,22 +268,22 @@ export default function FacelessPage() {
           {step === 1 && (
             <div>
               <label className="text-xs text-gray-500 mb-3 block font-medium">Visual style</label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
                 {STYLES.map((s) => (
                   <button key={s.id} onClick={() => setStyle(s.id)}
                     className={`relative overflow-hidden rounded-md border transition-all ${
                       style === s.id ? "border-indigo-500 ring-1 ring-indigo-500/40" : "border-gray-800 hover:border-gray-700"
                     }`}
                   >
-                    <div className="aspect-[3/4] overflow-hidden">
+                    <div className="aspect-square overflow-hidden">
                       <img src={s.image} alt={s.label} className="w-full h-full object-cover" />
                     </div>
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2 pt-6">
-                      <p className="text-xs font-medium text-white">{s.label}</p>
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-1.5 pb-1 pt-4">
+                      <p className="text-[10px] font-medium text-white leading-tight">{s.label}</p>
                     </div>
                     {style === s.id && (
-                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
