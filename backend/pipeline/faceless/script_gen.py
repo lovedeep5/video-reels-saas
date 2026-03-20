@@ -90,9 +90,10 @@ SCRIPT_TYPE_INSTRUCTIONS = {
 }
 
 
-def generate_script(topic: str, duration_seconds: int = 30, style: str = "ghibli", script_type: str = "story") -> dict:
+def generate_script(topic: str, duration_seconds: int = 30, style: str = "ghibli", script_type: str = "story", variation_hint: str = "") -> dict:
     """
     Generate a narration script with image prompts for each segment.
+    variation_hint: optional instruction to ensure unique content (used by automation).
     Returns: {"title": str, "segments": [{"text": str, "duration": float, "image_prompt": str}]}
     """
     if duration_seconds <= 15:
@@ -112,10 +113,18 @@ def generate_script(topic: str, duration_seconds: int = 30, style: str = "ghibli
 
     type_instruction = SCRIPT_TYPE_INSTRUCTIONS.get(script_type, SCRIPT_TYPE_INSTRUCTIONS["story"])
 
+    variation_block = ""
+    if variation_hint:
+        variation_block = f"""
+IMPORTANT — UNIQUENESS REQUIREMENT:
+{variation_hint}
+You MUST pick a completely different angle, different facts, different story, or different perspective than any previous video about this topic. Be creative and surprising.
+"""
+
     prompt = f"""You are a professional short-form video scriptwriter. Write a captivating narration script for a {duration_seconds}-second faceless video about: "{topic}"
 
 SCRIPT STYLE: {type_instruction}
-
+{variation_block}
 Rules:
 - Split into exactly {num_segments} segments of ~{seg_dur}s each
 - Each segment: 1-2 compelling sentences

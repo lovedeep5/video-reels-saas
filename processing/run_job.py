@@ -153,6 +153,7 @@ def _faceless_pipeline(job: dict):
     style = job.get("faceless_style", "ghibli")
     voice = job.get("faceless_voice", "andrew")
     duration = job.get("faceless_duration", 30)
+    variation_hint = job.get("faceless_variation_hint", "")
 
     work_dir = TEMP_DIR / JOB_ID
     if work_dir.exists():
@@ -161,7 +162,7 @@ def _faceless_pipeline(job: dict):
 
     # 1. Generate script
     update_job(status="processing", progress=5, progress_message="AI writing script...")
-    script = generate_script(topic=topic, duration_seconds=duration, style=style, script_type=script_type)
+    script = generate_script(topic=topic, duration_seconds=duration, style=style, script_type=script_type, variation_hint=variation_hint)
     video_title = script.get("title", topic[:50])
     jobs.update_one({"_id": ObjectId(JOB_ID)}, {"$set": {
         "video_title": video_title,

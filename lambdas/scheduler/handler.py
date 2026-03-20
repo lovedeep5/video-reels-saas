@@ -197,6 +197,15 @@ def _run_processor():
             }})
             continue
 
+        # Build variation hint so LLM generates unique content each run
+        run_num = automation.get("total_runs", 0) + 1
+        variation_hint = (
+            f"This is run #{run_num} for the recurring topic '{run['topic']}'. "
+            f"Previous runs have already covered this topic from other angles. "
+            f"Pick a FRESH, UNIQUE angle — different sub-topic, different facts, "
+            f"different story, or different perspective. Never repeat content."
+        )
+
         # Create faceless job
         job_doc = {
             "user_id": run["user_id"],
@@ -211,6 +220,7 @@ def _run_processor():
             "faceless_duration": automation.get("duration", 30),
             "faceless_music": automation.get("music", "none"),
             "faceless_text_style": "bold-stroke",
+            "faceless_variation_hint": variation_hint,
             "automation_id": automation["_id"],
             "automation_run_id": run["_id"],
             "progress": 0,
