@@ -138,7 +138,7 @@ resource "aws_lambda_permission" "recovery_eventbridge" {
   source_arn    = aws_cloudwatch_event_rule.recovery_schedule.arn
 }
 
-# ── Scheduler Lambda ───────────────────────────────────────────────────────
+# ── Scheduler Lambda (single Lambda, two triggers) ────────────────────────
 resource "aws_cloudwatch_log_group" "scheduler" {
   name              = "/aws/lambda/vidtoreels-scheduler"
   retention_in_days = 30
@@ -147,7 +147,7 @@ resource "aws_cloudwatch_log_group" "scheduler" {
 
 resource "aws_lambda_function" "scheduler" {
   function_name    = "vidtoreels-scheduler"
-  description      = "Cron: publishes scheduled posts every 5 minutes"
+  description      = "Hourly: processor (XX:30) generates videos, publisher (XX:00) publishes them"
   filename         = data.archive_file.scheduler.output_path
   source_code_hash = data.archive_file.scheduler.output_base64sha256
   handler          = "handler.handler"
@@ -158,11 +158,12 @@ resource "aws_lambda_function" "scheduler" {
 
   environment {
     variables = {
-      AWS_REGION_NAME          = var.aws_region
-      MONGODB_URI_SSM_PATH     = aws_ssm_parameter.mongodb_uri.name
-      MONGODB_DB_NAME          = var.mongodb_db_name
-      S3_BUCKET                = var.s3_bucket
-      YOUTUBE_CLIENT_ID_SSM    = "/vidtoreels/YOUTUBE_CLIENT_ID"
+      AWS_REGION_NAME           = var.aws_region
+      MONGODB_URI_SSM_PATH      = aws_ssm_parameter.mongodb_uri.name
+      MONGODB_DB_NAME           = var.mongodb_db_name
+      S3_BUCKET                 = var.s3_bucket
+      JOB_QUEUE_URL             = aws_sqs_queue.jobs.url
+      YOUTUBE_CLIENT_ID_SSM     = "/vidtoreels/YOUTUBE_CLIENT_ID"
       YOUTUBE_CLIENT_SECRET_SSM = "/vidtoreels/YOUTUBE_CLIENT_SECRET"
     }
   }
@@ -175,24 +176,48 @@ resource "aws_lambda_function" "scheduler" {
   tags = local.common_tags
 }
 
-# EventBridge → Scheduler (every 5 min)
-resource "aws_cloudwatch_event_rule" "scheduler_schedule" {
-  name                = "vidtoreels-scheduler-schedule"
-  description         = "Triggers the scheduler Lambda every 5 minutes"
-  schedule_expression = "rate(5 minutes)"
+# Publisher: runs at XX:00 every hour
+resource "aws_cloudwatch_event_rule" "publisher_schedule" {
+  name                = "vidtoreels-publisher-schedule"
+  description         = "Triggers publisher mode every hour at :00"
+  schedule_expression = "cron(0 * * * ? *)"
   tags                = local.common_tags
 }
 
-resource "aws_cloudwatch_event_target" "scheduler" {
-  rule      = aws_cloudwatch_event_rule.scheduler_schedule.name
-  target_id = "vidtoreels-scheduler"
+resource "aws_cloudwatch_event_target" "publisher" {
+  rule      = aws_cloudwatch_event_rule.publisher_schedule.name
+  target_id = "vidtoreels-publisher"
   arn       = aws_lambda_function.scheduler.arn
+  input     = jsonencode({ mode = "publisher" })
 }
 
-resource "aws_lambda_permission" "scheduler_eventbridge" {
-  statement_id  = "AllowExecutionFromEventBridge"
+resource "aws_lambda_permission" "publisher_eventbridge" {
+  statement_id  = "AllowPublisherFromEventBridge"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.scheduler.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.scheduler_schedule.arn
+  source_arn    = aws_cloudwatch_event_rule.publisher_schedule.arn
+}
+
+# Processor: runs at XX:30 every hour
+resource "aws_cloudwatch_event_rule" "processor_schedule" {
+  name                = "vidtoreels-processor-schedule"
+  description         = "Triggers processor mode every hour at :30"
+  schedule_expression = "cron(30 * * * ? *)"
+  tags                = local.common_tags
+}
+
+resource "aws_cloudwatch_event_target" "processor" {
+  rule      = aws_cloudwatch_event_rule.processor_schedule.name
+  target_id = "vidtoreels-processor"
+  arn       = aws_lambda_function.scheduler.arn
+  input     = jsonencode({ mode = "processor" })
+}
+
+resource "aws_lambda_permission" "processor_eventbridge" {
+  statement_id  = "AllowProcessorFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.scheduler.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.processor_schedule.arn
 }

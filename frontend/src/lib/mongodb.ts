@@ -263,4 +263,64 @@ export async function scheduledPublishesCol(): Promise<Collection<DbScheduledPub
   return col;
 }
 
+// ── Automations ─────────────────────────────────────────────────────────────
+
+export interface DbAutomation {
+  _id?: ObjectId;
+  user_id: ObjectId;
+  name: string;
+  is_active: boolean;
+  // Topics (rotates 1 per day)
+  topics: string[];
+  topic_index: number;
+  // Video settings
+  script_type: string;
+  style: string;
+  voice: string;
+  music: string;
+  duration: number;
+  // Schedule
+  post_hour: number; // 0-23 UTC
+  // Publishing
+  platforms: { platform: "youtube" | "instagram"; channel_id: string }[];
+  visibility: string;
+  // Stats
+  total_runs: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface DbAutomationRun {
+  _id?: ObjectId;
+  automation_id: ObjectId;
+  user_id: ObjectId;
+  scheduled_post_at: Date;
+  topic: string;
+  status: "pending" | "generating" | "ready" | "published" | "failed";
+  job_id?: ObjectId;
+  error_message?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+let _automationIndexesEnsured = false;
+
+export async function automationsCol(): Promise<Collection<DbAutomation>> {
+  const col = (await getDb()).collection<DbAutomation>("automations");
+  if (!_automationIndexesEnsured) {
+    _automationIndexesEnsured = true;
+    col.createIndex({ user_id: 1 }).catch(() => {});
+  }
+  return col;
+}
+
+export async function automationRunsCol(): Promise<Collection<DbAutomationRun>> {
+  const col = (await getDb()).collection<DbAutomationRun>("automation_runs");
+  if (!_automationIndexesEnsured) {
+    col.createIndex({ status: 1, scheduled_post_at: 1 }).catch(() => {});
+    col.createIndex({ automation_id: 1, scheduled_post_at: -1 }).catch(() => {});
+  }
+  return col;
+}
+
 export { ObjectId };

@@ -320,3 +320,61 @@ export const scheduleApi = {
     api.patch(`/schedule/${id}`, data),
   cancel: (id: string) => api.delete(`/schedule/${id}`),
 };
+
+// ── Automations API ─────────────────────────────────────────────────────────
+
+export interface Automation {
+  id: string;
+  name: string;
+  is_active: boolean;
+  topics: string[];
+  topic_index: number;
+  script_type: string;
+  style: string;
+  voice: string;
+  music: string;
+  duration: number;
+  post_hour: number;
+  platforms: { platform: string; channel_id: string }[];
+  visibility: string;
+  total_runs: number;
+  latest_run: {
+    status: string;
+    topic: string;
+    scheduled_post_at: string;
+    job_id: string | null;
+  } | null;
+  next_run_at: string | null;
+  created_at: string;
+}
+
+export interface AutomationDetail extends Automation {
+  runs: {
+    id: string;
+    status: string;
+    topic: string;
+    scheduled_post_at: string;
+    job_id: string | null;
+    error_message: string | null;
+  }[];
+}
+
+export const automationsApi = {
+  list: () => api.get<Automation[]>("/automations"),
+  get: (id: string) => api.get<AutomationDetail>(`/automations/${id}`),
+  create: (data: {
+    name: string;
+    topics: string[];
+    script_type: string;
+    style: string;
+    voice: string;
+    music: string;
+    duration: number;
+    post_hour: number;
+    platforms: { platform: string; channel_id: string }[];
+    visibility: string;
+  }) => api.post("/automations", data),
+  update: (id: string, data: Record<string, unknown>) => api.patch(`/automations/${id}`, data),
+  delete: (id: string) => api.delete(`/automations/${id}`),
+  toggle: (id: string, is_active: boolean) => api.patch(`/automations/${id}`, { is_active }),
+};

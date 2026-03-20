@@ -162,6 +162,12 @@ resource "aws_iam_policy" "lambda_scheduler" {
         Action   = ["s3:GetObject"]
         Resource = "arn:aws:s3:::${var.s3_bucket}/*"
       },
+      # SQS — enqueue jobs for automation video generation
+      {
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage"]
+        Resource = aws_sqs_queue.jobs.arn
+      },
     ]
   })
 }
