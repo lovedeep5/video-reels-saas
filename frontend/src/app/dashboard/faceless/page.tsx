@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/api";
+import api, { youtubeApi, instagramApi, YouTubeStatus, InstagramStatus, ChannelInfo } from "@/lib/api";
 
 /* ── Data ────────────────────────────────────────────────────────────────── */
 
@@ -78,7 +78,25 @@ export default function FacelessPage() {
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Auto-publish state
+  const [autoPublish, setAutoPublish] = useState(false);
+  const [ytChannels, setYtChannels] = useState<ChannelInfo[]>([]);
+  const [igChannels, setIgChannels] = useState<ChannelInfo[]>([]);
+  const [autoYt, setAutoYt] = useState(false);
+  const [autoIg, setAutoIg] = useState(false);
+  const [autoYtChannel, setAutoYtChannel] = useState("");
+  const [autoIgChannel, setAutoIgChannel] = useState("");
+  const [autoVisibility, setAutoVisibility] = useState("public");
+
   useEffect(() => {
+    youtubeApi.status().then((r) => {
+      setYtChannels(r.data.channels ?? []);
+      if (r.data.channels?.length) setAutoYtChannel(r.data.channels[0].id);
+    }).catch(() => {});
+    instagramApi.status().then((r) => {
+      setIgChannels(r.data.channels ?? []);
+      if (r.data.channels?.length) setAutoIgChannel(r.data.channels[0].id);
+    }).catch(() => {});
     return () => { audioRef.current?.pause(); };
   }, []);
 
@@ -108,6 +126,13 @@ export default function FacelessPage() {
     setError("");
     setSubmitting(true);
     try {
+      // Build auto_publish config if enabled
+      const platforms: { platform: string; channel_id: string }[] = [];
+      if (autoPublish) {
+        if (autoYt && autoYtChannel) platforms.push({ platform: "youtube", channel_id: autoYtChannel });
+        if (autoIg && autoIgChannel) platforms.push({ platform: "instagram", channel_id: autoIgChannel });
+      }
+
       const res = await api.post("/faceless/submit", {
         topic: topic.trim(),
         style,
@@ -115,7 +140,8 @@ export default function FacelessPage() {
         music,
         text_style: textStyle,
         duration,
-        count: 1, // Always 1 for now
+        count: 1,
+        ...(platforms.length > 0 ? { auto_publish: { platforms, visibility: autoVisibility } } : {}),
       });
       const jobIds: string[] = res.data.job_ids;
       router.push(jobIds.length === 1 ? `/dashboard/jobs/${jobIds[0]}` : "/dashboard");
@@ -380,6 +406,70 @@ export default function FacelessPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Auto-Post ────────────────────────────────────────────────────── */}
+      {(ytChannels.length > 0 || igChannels.length > 0) && (
+        <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Auto-Post When Ready</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Automatically publish after video is created</p>
+            </div>
+            <button
+              onClick={() => setAutoPublish(!autoPublish)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${autoPublish ? "bg-indigo-600" : "bg-gray-700"}`}
+            >
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${autoPublish ? "left-5.5 translate-x-0.5" : "left-0.5"}`} />
+            </button>
+          </div>
+
+          {autoPublish && (
+            <div className="space-y-3 pt-2 border-t border-gray-800">
+              {/* YouTube toggle */}
+              {ytChannels.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" checked={autoYt} onChange={(e) => setAutoYt(e.target.checked)} className="rounded bg-gray-800 border-gray-700 text-red-600" />
+                  <span className="text-sm text-gray-300 flex-1">YouTube</span>
+                  {ytChannels.length > 1 ? (
+                    <select value={autoYtChannel} onChange={(e) => setAutoYtChannel(e.target.value)} className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white">
+                      {ytChannels.map((ch) => <option key={ch.id} value={ch.id}>{ch.account_name}</option>)}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-gray-500">{ytChannels[0].account_name}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Instagram toggle */}
+              {igChannels.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" checked={autoIg} onChange={(e) => setAutoIg(e.target.checked)} className="rounded bg-gray-800 border-gray-700 text-pink-600" />
+                  <span className="text-sm text-gray-300 flex-1">Instagram</span>
+                  {igChannels.length > 1 ? (
+                    <select value={autoIgChannel} onChange={(e) => setAutoIgChannel(e.target.value)} className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white">
+                      {igChannels.map((ch) => <option key={ch.id} value={ch.id}>{ch.account_name}</option>)}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-gray-500">{igChannels[0].account_name}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Visibility (YouTube) */}
+              {autoYt && (
+                <div className="flex items-center gap-3 pl-6">
+                  <span className="text-xs text-gray-500">Visibility:</span>
+                  <select value={autoVisibility} onChange={(e) => setAutoVisibility(e.target.value)} className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white">
+                    <option value="public">Public</option>
+                    <option value="unlisted">Unlisted</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Submit ─────────────────────────────────────────────────────────── */}
       <button
