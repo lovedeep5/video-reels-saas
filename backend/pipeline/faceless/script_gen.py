@@ -17,12 +17,18 @@ MODELS = [
 
 # Style descriptions for image prompt injection
 STYLE_PROMPTS = {
-    "ghibli": "Studio Ghibli anime style, warm colors, detailed hand-painted background, soft lighting, Miyazaki aesthetic",
-    "anime": "modern anime illustration, vibrant colors, crisp linework, dramatic lighting, detailed background",
-    "cartoon": "western cartoon style, bold colors, clean shapes, playful composition, Pixar-inspired",
-    "comic": "comic book illustration style, bold ink outlines, halftone dots, dramatic angles, vivid colors",
-    "realistic": "photorealistic digital art, cinematic lighting, 8k detail, depth of field, dramatic atmosphere",
-    "watercolor": "soft watercolor painting, gentle washes of color, artistic brush strokes, dreamy ethereal mood",
+    "comic": "comic book art style, thick bold ink outlines, flat cel shading, muted color palette with strong shadows, noir comic aesthetic, dramatic panel composition, graphic novel illustration",
+    "creepy-comic": "creepy comic book illustration, dark muted colors, unsettling character expressions, horror comic art style, thick ink outlines, eerie shadows, vintage horror comic aesthetic",
+    "modern-cartoon": "modern cartoon illustration, stylized characters with exaggerated features, bold colors, clean digital art, trendy urban aesthetic, detailed background, contemporary cartoon style",
+    "disney": "Disney Pixar 3D animation style, soft warm lighting, photorealistic 3D rendering, charming character design, cozy indoor setting, subsurface scattering on skin, Pixar movie quality",
+    "ghibli": "Studio Ghibli hand-painted anime style, warm golden lighting, lush detailed nature backgrounds, soft pastel colors, whimsical atmosphere, Miyazaki aesthetic, watercolor texture",
+    "anime": "modern Japanese anime illustration, dramatic shading, vibrant saturated colors, detailed character design, crisp linework, dynamic composition, manga art style, detailed clothing and accessories",
+    "painting": "classical oil painting style, rich warm tones, dramatic chiaroscuro lighting, detailed brushwork visible, Renaissance-inspired composition, museum quality portrait, old master technique",
+    "dark-fantasy": "dark fantasy illustration, epic dramatic lighting with aurora borealis, medieval gothic aesthetic, detailed armor and weapons, mystical atmosphere, ravens and dark imagery, cinematic fantasy art",
+    "lego": "LEGO minifigure 3D render style, plastic toy aesthetic, bright primary colors, simple round heads with printed faces, blocky proportions, studio lighting on plastic surface, LEGO brick world",
+    "polaroid": "vintage Polaroid photograph aesthetic, warm film grain, soft focus bokeh, nostalgic warm color grading, natural candid portrait photography, fairy lights background, retro film camera look",
+    "realistic": "hyperrealistic cinematic photography, golden hour natural lighting, shallow depth of field, 8K detail, real-world setting, photojournalistic style, professional DSLR camera quality",
+    "fantastic": "fantastical digital art, surreal underwater or otherworldly environment, volumetric light rays, ethereal glowing atmosphere, epic scale, concept art quality, cinematic wide composition",
 }
 
 

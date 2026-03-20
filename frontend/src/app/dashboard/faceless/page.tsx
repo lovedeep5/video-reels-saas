@@ -16,12 +16,18 @@ const CATEGORIES = [
 ];
 
 const STYLES = [
-  { id: "ghibli", label: "Studio Ghibli", desc: "Warm, hand-painted anime aesthetic", image: "/styles/ghibli.jpg" },
-  { id: "anime", label: "Modern Anime", desc: "Vibrant, crisp anime illustration", image: "/styles/anime.jpg" },
-  { id: "cartoon", label: "Cartoon", desc: "Bold, playful Pixar-inspired", image: "/styles/cartoon.jpg" },
-  { id: "comic", label: "Comic Book", desc: "Bold outlines, halftone dots", image: "/styles/comic.jpg" },
-  { id: "realistic", label: "Cinematic", desc: "Photorealistic, dramatic lighting", image: "/styles/realistic.jpg" },
-  { id: "watercolor", label: "Watercolor", desc: "Soft, dreamy brush strokes", image: "/styles/watercolor.jpg" },
+  { id: "comic", label: "Comic", desc: "Bold ink outlines, noir shading", image: "/styles/comic.webp" },
+  { id: "creepy-comic", label: "Creepy Comic", desc: "Dark horror comic aesthetic", image: "/styles/creepy-comic.webp" },
+  { id: "modern-cartoon", label: "Modern Cartoon", desc: "Stylized, trendy urban art", image: "/styles/modern-cartoon.webp" },
+  { id: "disney", label: "Disney", desc: "Pixar 3D animation style", image: "/styles/disney.webp" },
+  { id: "ghibli", label: "Ghibli", desc: "Hand-painted Miyazaki aesthetic", image: "/styles/ghibli.webp" },
+  { id: "anime", label: "Anime", desc: "Vibrant Japanese manga art", image: "/styles/anime.webp" },
+  { id: "painting", label: "Painting", desc: "Classical oil portrait style", image: "/styles/painting.webp" },
+  { id: "dark-fantasy", label: "Dark Fantasy", desc: "Epic gothic medieval art", image: "/styles/dark-fantasy.webp" },
+  { id: "lego", label: "Lego", desc: "Plastic minifigure 3D render", image: "/styles/lego.webp" },
+  { id: "polaroid", label: "Polaroid", desc: "Vintage film photography", image: "/styles/polaroid.webp" },
+  { id: "realistic", label: "Realism", desc: "Cinematic photography, 8K", image: "/styles/realistic.webp" },
+  { id: "fantastic", label: "Fantastic", desc: "Surreal, otherworldly scenes", image: "/styles/fantastic.webp" },
 ];
 
 const VOICES = [

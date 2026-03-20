@@ -4,7 +4,7 @@ import { jobsCol } from "@/lib/mongodb";
 import { enqueueJob } from "@/lib/sqs";
 import { getPlan, BILLABLE_STATUSES } from "@/lib/plans";
 
-const VALID_STYLES = ["ghibli", "anime", "cartoon", "comic", "realistic", "watercolor"];
+const VALID_STYLES = ["comic", "creepy-comic", "modern-cartoon", "disney", "ghibli", "anime", "painting", "dark-fantasy", "lego", "polaroid", "realistic", "fantastic"];
 const VALID_VOICES = ["jack", "emma", "andrew", "aria", "ryan", "sonia"];
 const VALID_DURATIONS = [10, 15, 30, 60];
 const VALID_MUSIC = ["none", "happy-rhythm", "suspenseful", "peaceful", "epic-cinematic", "mysterious", "energetic"];
