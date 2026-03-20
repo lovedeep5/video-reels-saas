@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { getPlanMeta, AppUserMeta } from "@/lib/auth";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -33,7 +34,7 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="border-b border-gray-800 bg-gray-950 px-6 py-3">
+    <nav className="border-b border-[var(--border-color)] bg-[var(--bg-primary)] px-6 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="text-lg font-bold text-indigo-400">VidToReels</Link>
@@ -42,7 +43,7 @@ export default function Navbar() {
             {navLinks.map(({ href, label }) => (
               <Link
                 key={href} href={href}
-                className={`text-sm ${pathname === href ? "text-white font-medium" : "text-gray-400 hover:text-white"}`}
+                className={`text-sm ${pathname === href ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
               >
                 {label}
               </Link>
@@ -61,6 +62,7 @@ export default function Navbar() {
               )}
             </span>
           )}
+          <ThemeToggle />
           <UserButton />
           {/* Hamburger — mobile only */}
           <button
