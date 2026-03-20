@@ -172,6 +172,9 @@ export default function FacelessPage() {
   const [scriptType, setScriptType] = useState("story");
   const [category, setCategory] = useState("");
   const [topic, setTopic] = useState("");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [style, setStyle] = useState("creepy-comic");
   const [voice, setVoice] = useState("andrew");
   const [music, setMusic] = useState("none");
@@ -214,10 +217,27 @@ export default function FacelessPage() {
 
   function handleCategoryClick(catId: string) {
     setCategory(catId);
+    setAiSuggestions([]);
     if (catId !== "custom") {
       const cat = CATEGORIES.find((c) => c.id === catId);
       if (cat && cat.topics.length > 0) setTopic(cat.topics[Math.floor(Math.random() * cat.topics.length)]);
+      // Fetch AI suggestions in background
+      setLoadingSuggestions(true);
+      api.post("/faceless/suggestions", { category: cat?.label || catId, script_type: scriptType })
+        .then((r) => setAiSuggestions(r.data.suggestions || []))
+        .catch(() => {})
+        .finally(() => setLoadingSuggestions(false));
     } else { setTopic(""); }
+  }
+
+  function addTopic(t: string) {
+    const trimmed = t.trim();
+    if (!trimmed || selectedTopics.includes(trimmed)) return;
+    setSelectedTopics([...selectedTopics, trimmed]);
+  }
+
+  function removeTopic(t: string) {
+    setSelectedTopics(selectedTopics.filter((x) => x !== t));
   }
 
   function playAudio(id: string, file: string) {
@@ -239,9 +259,9 @@ export default function FacelessPage() {
     if (autoIg && autoIgChannel) platforms.push({ platform: "instagram", channel_id: autoIgChannel });
 
     if (scheduleMode === "daily") {
-      // Create automation (daily recurring) — uses topic from Step 1
-      if (!topic.trim()) { setError("Go back to Step 1 and enter a topic"); return; }
-      const topics = [topic.trim()];
+      // Create automation (daily recurring)
+      const topics = selectedTopics.length > 0 ? selectedTopics : (topic.trim() ? [topic.trim()] : []);
+      if (topics.length === 0) { setError("Add at least 1 topic"); return; }
       if (platforms.length === 0) { setError("Select at least 1 channel to publish to"); return; }
 
       setSubmitting(true);
@@ -261,11 +281,12 @@ export default function FacelessPage() {
       }
     } else {
       // One-time scheduled video
-      if (!topic.trim()) { setError("Please enter a topic"); return; }
+      const oneTopic = topic.trim() || selectedTopics[0] || "";
+      if (!oneTopic) { setError("Please enter a topic"); return; }
       setSubmitting(true);
       try {
         const res = await api.post("/faceless/submit", {
-          topic: topic.trim(), script_type: scriptType, style, voice, music,
+          topic: oneTopic, script_type: scriptType, style, voice, music,
           text_style: "bold-stroke", duration, count: 1,
           ...(platforms.length > 0 ? { auto_publish: { platforms, visibility: autoVisibility } } : {}),
         });
@@ -280,7 +301,7 @@ export default function FacelessPage() {
 
   const selectedCat = CATEGORIES.find((c) => c.id === category);
   const selectedStyle = STYLES.find((s) => s.id === style);
-  const canNext = step === 0 ? topic.trim().length > 0 : true;
+  const canNext = step === 0 ? (topic.trim().length > 0 || selectedTopics.length > 0) : true;
 
   function goNext() { if (canNext && step < TOTAL_STEPS - 1) setStep(step + 1); }
   function goBack() { if (step > 0) setStep(step - 1); }
@@ -345,25 +366,68 @@ export default function FacelessPage() {
                 </div>
               </div>
 
-              {selectedCat && selectedCat.topics.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedCat.topics.map((t) => (
-                    <button key={t} onClick={() => setTopic(t)}
-                      className={`text-xs px-3 py-1.5 rounded-md transition-all border ${
-                        topic === t ? "bg-indigo-600/30 text-indigo-300 border-indigo-600" : "bg-transparent border-gray-700 text-gray-500 hover:text-gray-300"
-                      }`}
-                    >{t}</button>
-                  ))}
+              {/* Suggestions — static + AI generated */}
+              {(selectedCat || aiSuggestions.length > 0) && (
+                <div>
+                  <label className="text-xs text-gray-400 mb-2 block">
+                    Suggested topics
+                    {loadingSuggestions && <span className="ml-2 text-indigo-400">generating more...</span>}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {/* Static suggestions */}
+                    {selectedCat && selectedCat.topics.map((t) => (
+                      <button key={t} onClick={() => selectedTopics.includes(t) ? removeTopic(t) : addTopic(t)}
+                        className={`text-xs px-3 py-1.5 rounded-md transition-all border ${
+                          selectedTopics.includes(t) ? "bg-indigo-600/30 text-indigo-300 border-indigo-600" : "bg-transparent border-gray-700 text-gray-500 hover:text-gray-300"
+                        }`}
+                      >{selectedTopics.includes(t) ? "\u2713 " : "+"} {t}</button>
+                    ))}
+                    {/* AI suggestions */}
+                    {aiSuggestions.map((t) => (
+                      <button key={t} onClick={() => selectedTopics.includes(t) ? removeTopic(t) : addTopic(t)}
+                        className={`text-xs px-3 py-1.5 rounded-md transition-all border ${
+                          selectedTopics.includes(t) ? "bg-indigo-600/30 text-indigo-300 border-indigo-600" : "bg-transparent border-purple-800 text-purple-400 hover:text-purple-300"
+                        }`}
+                      >{selectedTopics.includes(t) ? "\u2713 " : "+"} {t}</button>
+                    ))}
+                  </div>
                 </div>
               )}
 
+              {/* Selected topics */}
+              {selectedTopics.length > 0 && (
+                <div>
+                  <label className="text-xs text-gray-400 mb-2 block">
+                    Selected topics ({selectedTopics.length}) — {scheduleMode === "daily" ? "rotates daily" : "first one used"}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedTopics.map((t) => (
+                      <span key={t} className="inline-flex items-center gap-1 text-xs bg-indigo-600/20 text-indigo-300 border border-indigo-700 px-2.5 py-1 rounded-md">
+                        {t}
+                        <button onClick={() => removeTopic(t)} className="ml-0.5 text-indigo-400 hover:text-white">&times;</button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Manual topic input */}
               <div>
-                <label className="text-xs text-gray-400 mb-2 block">Your topic or prompt</label>
-                <textarea value={topic} onChange={(e) => setTopic(e.target.value)}
-                  placeholder="e.g. 5 terrifying facts about the deep ocean..."
-                  rows={3}
-                  className="w-full bg-gray-900/50 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none"
-                />
+                <label className="text-xs text-gray-400 mb-2 block">Or type your own topic</label>
+                <div className="flex gap-2">
+                  <input value={topic} onChange={(e) => setTopic(e.target.value)}
+                    placeholder="e.g. 5 terrifying facts about the deep ocean..."
+                    onKeyDown={(e) => { if (e.key === "Enter" && topic.trim()) { e.preventDefault(); addTopic(topic); setTopic(""); } }}
+                    className="flex-1 bg-gray-900/50 border border-gray-700 rounded-md px-4 py-2.5 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                  {topic.trim() && (
+                    <button onClick={() => { addTopic(topic); setTopic(""); }}
+                      className="px-3 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-md transition-colors">
+                      Add
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-600 mt-1">Press Enter to add. For daily automation, add multiple topics and they'll rotate.</p>
               </div>
 
               <div>
@@ -580,7 +644,7 @@ export default function FacelessPage() {
               {/* Summary */}
               <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 space-y-2">
                 {[
-                  ["Topic", topic],
+                  ["Topic", selectedTopics.length > 1 ? `${selectedTopics.length} topics (rotating daily)` : (topic.trim() || selectedTopics[0] || "—")],
                   ["Style", selectedStyle?.label],
                   ["Voice", VOICES.find(v => v.id === voice)?.label],
                   ["Duration", `${duration}s`],
