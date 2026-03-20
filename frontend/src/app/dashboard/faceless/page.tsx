@@ -65,6 +65,88 @@ const DURATIONS = [
   { value: 60, label: "60s" },
 ];
 
+/* ── Style Carousel ───────────────────────────────────────────────────── */
+
+function StyleCarousel({ style, setStyle }: { style: string; setStyle: (s: string) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  function checkScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 10);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+  }
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (el) el.addEventListener("scroll", checkScroll, { passive: true });
+    return () => { if (el) el.removeEventListener("scroll", checkScroll); };
+  }, []);
+
+  function scroll(dir: "left" | "right") {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.8;
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-gray-400 mb-4">Choose the visual style for your video</p>
+      <div className="relative">
+        {/* Left arrow */}
+        {canScrollLeft && (
+          <button onClick={() => scroll("left")}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-gray-900/90 border border-gray-700 flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-800 transition-all -ml-2 shadow-lg"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+        )}
+        {/* Right arrow */}
+        {canScrollRight && (
+          <button onClick={() => scroll("right")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-gray-900/90 border border-gray-700 flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-800 transition-all -mr-2 shadow-lg"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        )}
+        {/* Scrollable row — hidden scrollbar */}
+        <div ref={scrollRef}
+          className="style-scroll flex gap-3 overflow-x-auto px-1"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          <style>{`.style-scroll::-webkit-scrollbar { display: none; }`}</style>
+          {STYLES.map((s) => (
+            <button key={s.id} onClick={() => setStyle(s.id)}
+              className="flex flex-col items-center shrink-0"
+              style={{ width: "calc((100% - 36px) / 4)" , minWidth: 120 }}
+            >
+              <div className={`relative w-full overflow-hidden rounded-lg border-2 transition-all ${
+                style === s.id ? "border-indigo-500" : "border-gray-800 hover:border-gray-700"
+              }`}>
+                <div className="aspect-[3/4]">
+                  <img src={s.image} alt={s.label} className="w-full h-full object-cover" />
+                </div>
+                {style === s.id && (
+                  <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shadow-lg">
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <p className={`text-xs font-medium mt-1.5 ${style === s.id ? "text-white" : "text-gray-400"}`}>{s.label}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const TOTAL_STEPS = 5;
 const STEP_TITLES = ["Topic & Script", "Art Style", "Voice", "Background Music", "Generate"];
 
@@ -77,7 +159,7 @@ export default function FacelessPage() {
   const [scriptType, setScriptType] = useState("story");
   const [category, setCategory] = useState("");
   const [topic, setTopic] = useState("");
-  const [style, setStyle] = useState("ghibli");
+  const [style, setStyle] = useState("creepy-comic");
   const [voice, setVoice] = useState("andrew");
   const [music, setMusic] = useState("none");
   const [duration, setDuration] = useState(30);
@@ -257,32 +339,7 @@ export default function FacelessPage() {
           )}
 
           {/* Step 1: Art Style */}
-          {step === 1 && (
-            <div>
-              <p className="text-sm text-gray-400 mb-4">Choose the visual style for your video</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {STYLES.map((s) => (
-                  <button key={s.id} onClick={() => setStyle(s.id)} className="text-left">
-                    <div className={`relative overflow-hidden rounded-lg border-2 transition-all ${
-                      style === s.id ? "border-indigo-500" : "border-gray-800 hover:border-gray-700"
-                    }`}>
-                      <div className="aspect-[3/4]">
-                        <img src={s.image} alt={s.label} className="w-full h-full object-cover" />
-                      </div>
-                      {style === s.id && (
-                        <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center">
-                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <p className={`text-xs font-medium mt-1.5 ${style === s.id ? "text-white" : "text-gray-400"}`}>{s.label}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {step === 1 && <StyleCarousel style={style} setStyle={setStyle} />}
 
           {/* Step 2: Voice */}
           {step === 2 && (
