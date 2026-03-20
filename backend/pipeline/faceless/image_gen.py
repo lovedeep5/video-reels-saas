@@ -1,82 +1,81 @@
-"""Generate images using Stable Horde (free, community-powered SDXL)."""
+"""Generate images using Flux via OpenRouter API."""
 
 import os
 import time
+import base64
 import httpx
 from PIL import Image
 
-HORDE_URL = "https://stablehorde.net/api/v2"
-ANON_KEY = "0000000000"  # anonymous access (free)
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+MODEL = "black-forest-labs/flux.2-klein-4b"
 
-# Generation size (9:16 portrait) — smaller for faster generation
-IMG_WIDTH = 576
-IMG_HEIGHT = 1024
 # Final video size
 VIDEO_WIDTH = 1080
 VIDEO_HEIGHT = 1920
 
 
-def _submit_job(prompt: str, index: int) -> str:
-    """Submit an image generation job. Returns job ID."""
-    payload = {
-        "prompt": prompt,
-        "params": {
-            "width": IMG_WIDTH,
-            "height": IMG_HEIGHT,
-            "steps": 25,
-            "cfg_scale": 7.5,
-            "sampler_name": "k_euler",
-        },
-        "nsfw": False,
-        "models": ["AlbedoBase XL (SDXL)"],
+def _generate_one(prompt: str, output_path: str, index: int, retries: int = 2) -> str:
+    """Generate a single image via Flux on OpenRouter. Returns output_path on success."""
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
     }
-    headers = {"apikey": ANON_KEY}
-    r = httpx.post(f"{HORDE_URL}/generate/async", json=payload, headers=headers, timeout=15)
-    r.raise_for_status()
-    job_id = r.json()["id"]
-    print(f"[ImageGen] Job {index+1} submitted: {job_id}")
-    return job_id
+    payload = {
+        "model": MODEL,
+        "modalities": ["image"],
+        "messages": [{"role": "user", "content": prompt}],
+    }
 
+    for attempt in range(retries + 1):
+        try:
+            start = time.time()
+            r = httpx.post(OPENROUTER_URL, headers=headers, json=payload, timeout=120)
+            elapsed = round(time.time() - start, 1)
 
-def _poll_and_download(job_id: str, output_path: str, index: int, max_wait: int = 300) -> str:
-    """Poll for job completion and download the image."""
-    start = time.time()
-    while time.time() - start < max_wait:
-        r = httpx.get(f"{HORDE_URL}/generate/check/{job_id}", timeout=10)
-        status = r.json()
-        if status.get("done", False):
-            break
-        wait = status.get("wait_time", 0)
-        queue = status.get("queue_position", 0)
-        elapsed = int(time.time() - start)
-        print(f"[ImageGen] Image {index+1}: queue={queue}, ~{wait}s remaining (elapsed: {elapsed}s)")
-        time.sleep(5)
-    else:
-        print(f"[ImageGen] Image {index+1}: Timed out after {max_wait}s")
-        return _create_fallback(output_path, index)
+            if r.status_code != 200:
+                print(f"[ImageGen] Image {index+1} attempt {attempt+1}: HTTP {r.status_code}")
+                if attempt < retries:
+                    time.sleep(3)
+                    continue
+                return _create_fallback(output_path, index)
 
-    # Fetch result
-    r = httpx.get(f"{HORDE_URL}/generate/status/{job_id}", timeout=15)
-    gens = r.json().get("generations", [])
-    if not gens:
-        print(f"[ImageGen] Image {index+1}: No generations returned")
-        return _create_fallback(output_path, index)
+            data = r.json()
+            images = data.get("choices", [{}])[0].get("message", {}).get("images", [])
+            if not images:
+                print(f"[ImageGen] Image {index+1} attempt {attempt+1}: No images in response")
+                if attempt < retries:
+                    time.sleep(3)
+                    continue
+                return _create_fallback(output_path, index)
 
-    img_url = gens[0].get("img", "")
-    img_r = httpx.get(img_url, timeout=30, follow_redirects=True)
+            url = images[0].get("image_url", {}).get("url", "")
+            if not url.startswith("data:image/"):
+                print(f"[ImageGen] Image {index+1}: Unexpected image URL format")
+                return _create_fallback(output_path, index)
 
-    # Save and convert to JPEG at video resolution
-    raw_path = output_path.rsplit(".", 1)[0] + "_raw.webp"
-    with open(raw_path, "wb") as f:
-        f.write(img_r.content)
+            b64 = url.split(",", 1)[1]
+            img_bytes = base64.b64decode(b64)
 
-    img = Image.open(raw_path).convert("RGB")
-    img = img.resize((VIDEO_WIDTH, VIDEO_HEIGHT), Image.Resampling.LANCZOS)
-    img.save(output_path, "JPEG", quality=92)
-    os.remove(raw_path)
+            raw_path = output_path.rsplit(".", 1)[0] + "_raw.png"
+            with open(raw_path, "wb") as f:
+                f.write(img_bytes)
 
-    print(f"[ImageGen] Image {index+1} saved: {output_path} ({os.path.getsize(output_path)//1024}KB)")
-    return output_path
+            img = Image.open(raw_path).convert("RGB")
+            img = img.resize((VIDEO_WIDTH, VIDEO_HEIGHT), Image.Resampling.LANCZOS)
+            img.save(output_path, "JPEG", quality=92)
+            os.remove(raw_path)
+
+            size_kb = os.path.getsize(output_path) // 1024
+            print(f"[ImageGen] Image {index+1} saved in {elapsed}s: {output_path} ({size_kb}KB)")
+            return output_path
+
+        except Exception as e:
+            print(f"[ImageGen] Image {index+1} attempt {attempt+1} error: {e}")
+            if attempt < retries:
+                time.sleep(3)
+
+    return _create_fallback(output_path, index)
 
 
 def _create_fallback(output_path: str, index: int) -> str:
@@ -106,33 +105,21 @@ def _create_fallback(output_path: str, index: int) -> str:
 
 def generate_segment_images(segments: list, output_dir: str) -> list:
     """
-    Generate AI images for all segments.
-    Submits all jobs in parallel, then polls/downloads sequentially.
+    Generate AI images for all segments sequentially via Flux.
+    Each image takes ~8-10 seconds.
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    # Submit all jobs at once
-    jobs = []
+    paths = []
+    total = len(segments)
     for i, seg in enumerate(segments):
         prompt = seg.get("image_prompt", "Beautiful landscape, cinematic, warm colors")
-        try:
-            job_id = _submit_job(prompt, i)
-            jobs.append((job_id, i))
-        except Exception as e:
-            print(f"[ImageGen] Submit failed for image {i+1}: {e}")
-            jobs.append((None, i))
-        time.sleep(1)
-
-    print(f"[ImageGen] {len([j for j, _ in jobs if j])} jobs submitted, waiting for results...")
-
-    # Poll and download each
-    paths = []
-    for job_id, i in jobs:
         path = os.path.join(output_dir, f"scene_{i}.jpg")
-        if job_id:
-            _poll_and_download(job_id, path, i)
-        else:
-            _create_fallback(path, i)
+        print(f"[ImageGen] Generating image {i+1}/{total}...")
+        _generate_one(prompt, path, i)
         paths.append(path)
+        if i < total - 1:
+            time.sleep(1)
 
+    print(f"[ImageGen] All {total} images generated.")
     return paths
