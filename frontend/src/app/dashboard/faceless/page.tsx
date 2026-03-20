@@ -267,29 +267,32 @@ export default function FacelessPage() {
           {/* ── Step 1: Style ─────────────────────────────────────────── */}
           {step === 1 && (
             <div>
-              <label className="text-xs text-gray-500 mb-3 block font-medium">Visual style</label>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-                {STYLES.map((s) => (
-                  <button key={s.id} onClick={() => setStyle(s.id)}
-                    className={`relative overflow-hidden rounded-md border transition-all ${
-                      style === s.id ? "border-indigo-500 ring-1 ring-indigo-500/40" : "border-gray-800 hover:border-gray-700"
-                    }`}
-                  >
-                    <div className="aspect-square overflow-hidden">
-                      <img src={s.image} alt={s.label} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-1.5 pb-1 pt-4">
-                      <p className="text-[10px] font-medium text-white leading-tight">{s.label}</p>
-                    </div>
-                    {style === s.id && (
-                      <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center">
-                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+              <label className="text-xs text-gray-500 mb-3 block font-medium">Choose the visual style for your video</label>
+              <div className="overflow-x-auto pb-2 -mx-1">
+                <div className="flex gap-3 px-1" style={{ minWidth: "max-content" }}>
+                  {STYLES.map((s) => (
+                    <button key={s.id} onClick={() => setStyle(s.id)}
+                      className="flex flex-col items-center gap-2 shrink-0"
+                      style={{ width: 140 }}
+                    >
+                      <div className={`relative w-full overflow-hidden rounded-lg border-2 transition-all ${
+                        style === s.id ? "border-indigo-500" : "border-gray-800 hover:border-gray-700"
+                      }`}>
+                        <div className="aspect-[3/4] overflow-hidden">
+                          <img src={s.image} alt={s.label} className="w-full h-full object-cover" />
+                        </div>
+                        {style === s.id && (
+                          <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shadow-lg">
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </button>
-                ))}
+                      <span className={`text-xs font-medium ${style === s.id ? "text-white" : "text-gray-400"}`}>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
