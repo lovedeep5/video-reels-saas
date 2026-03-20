@@ -239,11 +239,9 @@ export default function FacelessPage() {
     if (autoIg && autoIgChannel) platforms.push({ platform: "instagram", channel_id: autoIgChannel });
 
     if (scheduleMode === "daily") {
-      // Create automation (daily recurring)
-      const topics = dailyTopics.trim()
-        ? dailyTopics.split("\n").map((t) => t.trim()).filter(Boolean)
-        : [topic.trim()];
-      if (topics.length === 0 || !topics[0]) { setError("Enter at least 1 topic"); return; }
+      // Create automation (daily recurring) — uses topic from Step 1
+      if (!topic.trim()) { setError("Go back to Step 1 and enter a topic"); return; }
+      const topics = [topic.trim()];
       if (platforms.length === 0) { setError("Select at least 1 channel to publish to"); return; }
 
       setSubmitting(true);
@@ -520,30 +518,22 @@ export default function FacelessPage() {
                 </div>
               )}
 
-              {/* Daily: hour picker + extra topics */}
+              {/* Daily: hour picker */}
               {scheduleMode === "daily" && (
-                <>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Post every day at (UTC)</label>
-                    <select value={dailyHour} onChange={(e) => setDailyHour(Number(e.target.value))}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2.5 text-sm text-white">
-                      {HOURS.map((h) => {
-                        const d = new Date(); d.setUTCHours(h, 0, 0, 0);
-                        const local = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                        return <option key={h} value={h}>{String(h).padStart(2, "0")}:00 UTC ({local} local)</option>;
-                      })}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Topics (one per line — rotates daily)</label>
-                    <textarea value={dailyTopics} onChange={(e) => setDailyTopics(e.target.value)} rows={4}
-                      placeholder={topic ? `${topic}\nAnother topic for day 2\nDay 3 topic...` : "Topic for day 1\nTopic for day 2\nTopic for day 3"}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 resize-none" />
-                    <p className="text-[10px] text-gray-600 mt-1">
-                      {(dailyTopics.trim() ? dailyTopics.split("\n").filter((t) => t.trim()).length : (topic.trim() ? 1 : 0))} topics — uses current topic if left empty
-                    </p>
-                  </div>
-                </>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Post every day at (UTC)</label>
+                  <select value={dailyHour} onChange={(e) => setDailyHour(Number(e.target.value))}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2.5 text-sm text-white">
+                    {HOURS.map((h) => {
+                      const d = new Date(); d.setUTCHours(h, 0, 0, 0);
+                      const local = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                      return <option key={h} value={h}>{String(h).padStart(2, "0")}:00 UTC ({local} local)</option>;
+                    })}
+                  </select>
+                  <p className="text-[10px] text-gray-600 mt-1">
+                    AI generates a unique video about &ldquo;{topic || "your topic"}&rdquo; every day with a fresh angle
+                  </p>
+                </div>
               )}
 
               {/* Publish to channels */}
@@ -590,7 +580,7 @@ export default function FacelessPage() {
               {/* Summary */}
               <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 space-y-2">
                 {[
-                  ["Topic", scheduleMode === "daily" ? `${(dailyTopics.trim() ? dailyTopics.split("\n").filter(t => t.trim()).length : 1)} topics (rotating)` : topic],
+                  ["Topic", topic],
                   ["Style", selectedStyle?.label],
                   ["Voice", VOICES.find(v => v.id === voice)?.label],
                   ["Duration", `${duration}s`],
@@ -603,11 +593,18 @@ export default function FacelessPage() {
                 ))}
               </div>
 
-              <button onClick={handleSubmit} disabled={submitting}
-                className={`w-full py-3.5 rounded-lg text-sm font-semibold transition-all ${
-                  submitting ? "bg-gray-800 text-gray-500 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-500 text-white"
-                }`}
-              >
+              <div className="flex gap-3">
+                <button onClick={goBack}
+                  className="px-4 py-3.5 rounded-lg text-sm font-medium border border-gray-700 text-gray-300 hover:border-gray-600 hover:text-white transition-all flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                  Back
+                </button>
+                <button onClick={handleSubmit} disabled={submitting}
+                  className={`flex-1 py-3.5 rounded-lg text-sm font-semibold transition-all ${
+                    submitting ? "bg-gray-800 text-gray-500 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                  }`}
+                >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -617,7 +614,8 @@ export default function FacelessPage() {
                     {scheduleMode === "daily" ? "Setting up automation..." : "Scheduling video..."}
                   </span>
                 ) : scheduleMode === "daily" ? "Start Daily Automation" : "Schedule Video"}
-              </button>
+                </button>
+              </div>
               <p className="text-center text-xs text-gray-600">
                 {scheduleMode === "daily" ? "1 credit per day, runs automatically" : "1 credit per video"}
               </p>
