@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Clip, jobsApi, YouTubeStatus, InstagramStatus, ChannelInfo, youtubeApi, instagramApi, authApi, isPaidPlan, AuthUser } from "@/lib/api";
+import { Clip, jobsApi, YouTubeStatus, InstagramStatus, ChannelInfo, youtubeApi, instagramApi, authApi, isPaidPlan, AuthUser, scheduleApi } from "@/lib/api";
 
 interface Props {
   clip: Clip;
@@ -262,6 +262,197 @@ function InstagramPublishModal({ clip, jobId, videoTitle, channels, onClose }: I
   );
 }
 
+// ── Schedule Modal ────────────────────────────────────────────────────────────
+
+interface ScheduleModalProps {
+  clip: Clip;
+  jobId: string;
+  videoTitle: string | null;
+  ytChannels: ChannelInfo[];
+  igChannels: ChannelInfo[];
+  onClose: () => void;
+}
+
+function ScheduleModal({ clip, jobId, videoTitle, ytChannels, igChannels, onClose }: ScheduleModalProps) {
+  const [platform, setPlatform] = useState<"youtube" | "instagram">(ytChannels.length > 0 ? "youtube" : "instagram");
+  const [channelId, setChannelId] = useState(
+    (platform === "youtube" ? ytChannels[0]?.id : igChannels[0]?.id) ?? ""
+  );
+  const [scheduledAt, setScheduledAt] = useState(() => {
+    const d = new Date(Date.now() + 3600_000);
+    return d.toISOString().slice(0, 16);
+  });
+  const [title, setTitle] = useState(clip.yt_title ?? videoTitle ?? "");
+  const [description, setDescription] = useState(clip.yt_description ?? "");
+  const [visibility, setVisibility] = useState("public");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const channels = platform === "youtube" ? ytChannels : igChannels;
+
+  useEffect(() => {
+    setChannelId(channels[0]?.id ?? "");
+  }, [platform]); // eslint-disable-line
+
+  async function handleSubmit() {
+    setError("");
+    setSubmitting(true);
+    try {
+      await scheduleApi.create({
+        job_id: jobId,
+        clip_index: clip.clip_index,
+        platform,
+        channel_id: channelId,
+        scheduled_at: new Date(scheduledAt).toISOString(),
+        title: title || undefined,
+        description: description || undefined,
+        visibility: platform === "youtube" ? visibility : undefined,
+      });
+      setSuccess(true);
+    } catch (e: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msg = (e as any)?.response?.data?.error || (e as Error).message || "Failed to schedule";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-white">Schedule Publish</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-lg">&times;</button>
+        </div>
+
+        {success ? (
+          <div className="text-center py-6">
+            <div className="text-green-400 text-3xl mb-3">{"\u2713"}</div>
+            <p className="text-white font-medium mb-1">Scheduled!</p>
+            <p className="text-sm text-gray-400">
+              Your video will be published at {new Date(scheduledAt).toLocaleString()}.
+            </p>
+            <button onClick={onClose} className="mt-4 bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-6 py-2 rounded-lg">
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Platform */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Platform</label>
+              <div className="flex gap-2">
+                {ytChannels.length > 0 && (
+                  <button
+                    onClick={() => setPlatform("youtube")}
+                    className={`flex-1 text-sm py-2 rounded-lg transition-colors ${
+                      platform === "youtube" ? "bg-red-700 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    YouTube
+                  </button>
+                )}
+                {igChannels.length > 0 && (
+                  <button
+                    onClick={() => setPlatform("instagram")}
+                    className={`flex-1 text-sm py-2 rounded-lg transition-colors ${
+                      platform === "instagram" ? "bg-pink-700 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Instagram
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Channel */}
+            {channels.length > 1 && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Channel</label>
+                <select
+                  value={channelId}
+                  onChange={(e) => setChannelId(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                >
+                  {channels.map((ch) => (
+                    <option key={ch.id} value={ch.id}>{ch.account_name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Date/Time */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Publish at</label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+              />
+            </div>
+
+            {/* Title */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">
+                {platform === "youtube" ? "Title" : "Caption"}
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={platform === "youtube" ? "Video title" : "Caption text"}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600"
+              />
+            </div>
+
+            {/* Description (YouTube only) */}
+            {platform === "youtube" && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Description</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 resize-none"
+                />
+              </div>
+            )}
+
+            {/* Visibility (YouTube only) */}
+            {platform === "youtube" && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Visibility</label>
+                <select
+                  value={visibility}
+                  onChange={(e) => setVisibility(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                >
+                  <option value="public">Public</option>
+                  <option value="unlisted">Unlisted</option>
+                  <option value="private">Private</option>
+                </select>
+              </div>
+            )}
+
+            {error && <p className="text-xs text-red-400">{error}</p>}
+
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !channelId}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+            >
+              {submitting ? "Scheduling..." : "Schedule Publish"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main ClipCard ─────────────────────────────────────────────────────────────
 
 export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props) {
@@ -269,6 +460,7 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
   const [downloadError, setDownloadError] = useState("");
   const [showYtPublish, setShowYtPublish] = useState(false);
   const [showIgPublish, setShowIgPublish] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [ytStatus, setYtStatus] = useState<YouTubeStatus | null>(null);
   const [igStatus, setIgStatus] = useState<InstagramStatus | null>(null);
   const [ytPublishedUrl, setYtPublishedUrl] = useState<string | null>(clip.youtube_url ?? null);
@@ -356,6 +548,16 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
             setShowIgPublish(false);
             if (url) { setIgPublishedUrl(url); onPublished?.(clip.clip_index, url); }
           }}
+        />
+      )}
+      {showSchedule && (
+        <ScheduleModal
+          clip={clip}
+          jobId={jobId}
+          videoTitle={videoTitle ?? null}
+          ytChannels={ytStatus?.channels ?? []}
+          igChannels={igStatus?.channels ?? []}
+          onClose={() => setShowSchedule(false)}
         />
       )}
 
@@ -447,9 +649,17 @@ export default function ClipCard({ clip, jobId, videoTitle, onPublished }: Props
                 <a href="/dashboard/settings" className="inline-flex items-center justify-center gap-1.5 border border-pink-900 text-pink-400 hover:text-pink-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors">Connect Instagram</a>
               ) : null}
 
+              {/* Schedule */}
+              {canPublish && (ytStatus?.connected || igStatus?.connected) && (
+                <button onClick={() => setShowSchedule(true)} title="Schedule publish" className="inline-flex items-center justify-center gap-1.5 border border-indigo-700 text-indigo-400 hover:text-indigo-300 hover:border-indigo-600 text-sm font-medium py-2 px-3 rounded-lg transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                  Schedule
+                </button>
+              )}
+
               {/* Upgrade prompt for free users */}
               {!canPublish && (
-                <a href="/billing" title="Upgrade to publish" className="inline-flex items-center justify-center gap-1.5 border border-indigo-800 text-indigo-400 hover:text-indigo-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors">↑ Upgrade to Publish</a>
+                <a href="/billing" title="Upgrade to publish" className="inline-flex items-center justify-center gap-1.5 border border-indigo-800 text-indigo-400 hover:text-indigo-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors">{"\u2191"} Upgrade to Publish</a>
               )}
             </div>
           ) : (
