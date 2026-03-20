@@ -145,9 +145,39 @@ export interface DbJob {
   faceless_duration?: number;
   faceless_music?: string;
   faceless_text_style?: string;
+  // Auto-publish config (set at creation, processed by scheduler Lambda)
+  auto_publish_config?: {
+    platforms: { platform: "youtube" | "instagram"; channel_id: string }[];
+    visibility?: string;
+  };
+  auto_publish_processed?: boolean;
   created_at: Date;
   started_at?: Date;
   completed_at?: Date;
+}
+
+export interface DbScheduledPublish {
+  _id?: ObjectId;
+  user_id: ObjectId;
+  job_id: ObjectId;
+  clip_index: number;
+  platform: "youtube" | "instagram";
+  channel_id: string;
+  // Publishing metadata
+  title?: string;
+  description?: string;
+  tags?: string[];
+  visibility?: string;
+  // Schedule
+  scheduled_at: Date;
+  status: "scheduled" | "publishing" | "published" | "failed" | "cancelled";
+  error_message?: string;
+  // Result
+  published_url?: string;
+  platform_id?: string;
+  published_at?: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface DbApiKey {
@@ -217,6 +247,19 @@ export interface DbPlan {
 
 export async function plansCol(): Promise<Collection<DbPlan>> {
   return (await getDb()).collection<DbPlan>("plans");
+}
+
+let _scheduleIndexesEnsured = false;
+
+export async function scheduledPublishesCol(): Promise<Collection<DbScheduledPublish>> {
+  const col = (await getDb()).collection<DbScheduledPublish>("scheduled_publishes");
+  if (!_scheduleIndexesEnsured) {
+    _scheduleIndexesEnsured = true;
+    col.createIndex({ status: 1, scheduled_at: 1 }).catch(() => {});
+    col.createIndex({ user_id: 1, status: 1 }).catch(() => {});
+    col.createIndex({ job_id: 1 }).catch(() => {});
+  }
+  return col;
 }
 
 export { ObjectId };

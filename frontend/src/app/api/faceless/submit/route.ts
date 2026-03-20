@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     music = "none",
     text_style = "bold-stroke",
     count = 1,
+    auto_publish,
   } = body;
 
   // Validation
@@ -76,6 +77,23 @@ export async function POST(req: NextRequest) {
   const jobIds: string[] = [];
 
   for (let i = 0; i < videoCount; i++) {
+    // Build auto_publish_config if provided and plan allows it
+    let autoPublishConfig: { platforms: { platform: "youtube" | "instagram"; channel_id: string }[]; visibility?: string } | undefined;
+    if (auto_publish && Array.isArray(auto_publish.platforms) && auto_publish.platforms.length > 0) {
+      const planData = getPlan(user.plan);
+      if (user.is_admin || ("auto_publish" in planData && planData.auto_publish)) {
+        const validPlatforms = auto_publish.platforms
+          .filter((p: { platform: string }) => p.platform === "youtube" || p.platform === "instagram")
+          .map((p: { platform: string; channel_id: string }) => ({
+            platform: p.platform as "youtube" | "instagram",
+            channel_id: p.channel_id,
+          }));
+        if (validPlatforms.length > 0) {
+          autoPublishConfig = { platforms: validPlatforms, visibility: auto_publish.visibility };
+        }
+      }
+    }
+
     const result = await jobs.insertOne({
       user_id: user._id!,
       status: "queued",
@@ -88,6 +106,7 @@ export async function POST(req: NextRequest) {
       faceless_duration: duration,
       faceless_music: music,
       faceless_text_style: text_style,
+      ...(autoPublishConfig ? { auto_publish_config: autoPublishConfig } : {}),
       progress: 0,
       progress_message: "Queued",
       retry_count: 0,

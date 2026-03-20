@@ -279,3 +279,44 @@ export const youtubeApi = {
     data: { title: string; description: string; tags: string[]; visibility: string; publishAt?: string; channel_id?: string }
   ) => api.post<YouTubePublishResult>(`/jobs/${jobId}/clips/${clipId}/publish-youtube`, data),
 };
+
+// ── Scheduling API ──────────────────────────────────────────────────────────
+
+export interface ScheduledPublish {
+  id: string;
+  job_id: string;
+  clip_index: number;
+  platform: "youtube" | "instagram";
+  channel_id: string;
+  title: string | null;
+  description: string | null;
+  tags: string[];
+  visibility: string | null;
+  scheduled_at: string;
+  status: "scheduled" | "publishing" | "published" | "failed" | "cancelled";
+  error_message: string | null;
+  published_url: string | null;
+  platform_id: string | null;
+  published_at: string | null;
+  created_at: string;
+}
+
+export const scheduleApi = {
+  list: (params?: { status?: string; platform?: string }) =>
+    api.get<ScheduledPublish[]>("/schedule", { params }),
+  create: (data: {
+    job_id: string;
+    clip_index: number;
+    platform: string;
+    channel_id: string;
+    scheduled_at: string;
+    title?: string;
+    description?: string;
+    tags?: string[];
+    visibility?: string;
+  }) => api.post<ScheduledPublish>("/schedule", data),
+  get: (id: string) => api.get<ScheduledPublish>(`/schedule/${id}`),
+  update: (id: string, data: Partial<{ scheduled_at: string; title: string; description: string; tags: string[]; visibility: string }>) =>
+    api.patch(`/schedule/${id}`, data),
+  cancel: (id: string) => api.delete(`/schedule/${id}`),
+};
