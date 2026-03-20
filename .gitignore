@@ -71,3 +71,4 @@ scripts/output/
 scripts/*.png
 scripts/*.js
 temp/
+/music
