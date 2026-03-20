@@ -1,18 +1,17 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import api, { youtubeApi, instagramApi, YouTubeStatus, InstagramStatus, ChannelInfo } from "@/lib/api";
+import api, { youtubeApi, instagramApi, ChannelInfo } from "@/lib/api";
 
 /* ── Data ────────────────────────────────────────────────────────────────── */
 
 const SCRIPT_TYPES = [
-  { id: "story", label: "Story", desc: "Narrative arc", icon: "📖" },
-  { id: "facts", label: "Facts", desc: "Did you know...", icon: "💡" },
-  { id: "explainer", label: "Explainer", desc: "How it works", icon: "🔍" },
-  { id: "listicle", label: "Top List", desc: "Countdown", icon: "📋" },
-  { id: "horror", label: "Horror", desc: "Suspense", icon: "👻" },
-  { id: "motivation", label: "Motivation", desc: "Inspire", icon: "🔥" },
+  { id: "story", label: "Story", icon: "📖" },
+  { id: "facts", label: "Facts", icon: "💡" },
+  { id: "explainer", label: "Explainer", icon: "🔍" },
+  { id: "listicle", label: "Top List", icon: "📋" },
+  { id: "horror", label: "Horror", icon: "👻" },
+  { id: "motivation", label: "Motivation", icon: "🔥" },
 ];
 
 const CATEGORIES = [
@@ -28,7 +27,7 @@ const CATEGORIES = [
 const STYLES = [
   { id: "comic", label: "Comic", image: "/styles/comic.webp" },
   { id: "creepy-comic", label: "Creepy Comic", image: "/styles/creepy-comic.webp" },
-  { id: "modern-cartoon", label: "Cartoon", image: "/styles/modern-cartoon.webp" },
+  { id: "modern-cartoon", label: "Modern Cartoon", image: "/styles/modern-cartoon.webp" },
   { id: "disney", label: "Disney", image: "/styles/disney.webp" },
   { id: "ghibli", label: "Ghibli", image: "/styles/ghibli.webp" },
   { id: "anime", label: "Anime", image: "/styles/anime.webp" },
@@ -50,13 +49,13 @@ const VOICES = [
 ];
 
 const MUSIC_TRACKS = [
-  { id: "none", label: "No Music", color: "bg-gray-700" },
-  { id: "happy-rhythm", label: "Happy", color: "bg-amber-500", file: "/music/happy-rhythm.mp3" },
-  { id: "suspenseful", label: "Suspense", color: "bg-indigo-600", file: "/music/suspenseful.mp3" },
-  { id: "peaceful", label: "Peaceful", color: "bg-emerald-500", file: "/music/peaceful.mp3" },
-  { id: "epic-cinematic", label: "Epic", color: "bg-purple-600", file: "/music/epic-cinematic.mp3" },
-  { id: "mysterious", label: "Mysterious", color: "bg-slate-600", file: "/music/mysterious.mp3" },
-  { id: "energetic", label: "Energetic", color: "bg-red-500", file: "/music/energetic.mp3" },
+  { id: "none", label: "No Music", desc: "Voice narration only", color: "bg-gray-600", file: undefined },
+  { id: "happy-rhythm", label: "Happy Rhythm", desc: "Upbeat and energetic, perfect for positive content", color: "bg-amber-500", file: "/music/happy-rhythm.mp3" },
+  { id: "suspenseful", label: "Quiet Before Storm", desc: "Building tension and anticipation for dramatic reveals", color: "bg-indigo-500", file: "/music/suspenseful.mp3" },
+  { id: "peaceful", label: "Peaceful Vibes", desc: "Calm and soothing background for relaxed storytelling", color: "bg-emerald-500", file: "/music/peaceful.mp3" },
+  { id: "epic-cinematic", label: "Brilliant Symphony", desc: "Orchestral and majestic for epic storytelling", color: "bg-purple-500", file: "/music/epic-cinematic.mp3" },
+  { id: "mysterious", label: "Breathing Shadows", desc: "Mysterious and eerie ambiance for suspenseful videos", color: "bg-slate-500", file: "/music/mysterious.mp3" },
+  { id: "energetic", label: "High Energy", desc: "Fast-paced pulse for action-packed content", color: "bg-red-500", file: "/music/energetic.mp3" },
 ];
 
 const DURATIONS = [
@@ -66,7 +65,8 @@ const DURATIONS = [
   { value: 60, label: "60s" },
 ];
 
-const STEPS = ["Topic", "Style", "Voice & Audio", "Publish"];
+const TOTAL_STEPS = 5;
+const STEP_TITLES = ["Topic & Script", "Art Style", "Voice", "Background Music", "Generate"];
 
 /* ── Page ────────────────────────────────────────────────────────────────── */
 
@@ -80,7 +80,6 @@ export default function FacelessPage() {
   const [style, setStyle] = useState("ghibli");
   const [voice, setVoice] = useState("andrew");
   const [music, setMusic] = useState("none");
-  const [textStyle, setTextStyle] = useState("bold-stroke");
   const [duration, setDuration] = useState(30);
 
   const [submitting, setSubmitting] = useState(false);
@@ -115,9 +114,7 @@ export default function FacelessPage() {
     if (catId !== "custom") {
       const cat = CATEGORIES.find((c) => c.id === catId);
       if (cat && cat.topics.length > 0) setTopic(cat.topics[Math.floor(Math.random() * cat.topics.length)]);
-    } else {
-      setTopic("");
-    }
+    } else { setTopic(""); }
   }
 
   function playAudio(id: string, file: string) {
@@ -143,7 +140,7 @@ export default function FacelessPage() {
       }
       const res = await api.post("/faceless/submit", {
         topic: topic.trim(), script_type: scriptType, style, voice, music,
-        text_style: textStyle, duration, count: 1,
+        text_style: "bold-stroke", duration, count: 1,
         ...(platforms.length > 0 ? { auto_publish: { platforms, visibility: autoVisibility } } : {}),
       });
       const jobIds: string[] = res.data.job_ids;
@@ -158,104 +155,99 @@ export default function FacelessPage() {
   const selectedStyle = STYLES.find((s) => s.id === style);
   const canNext = step === 0 ? topic.trim().length > 0 : true;
 
+  function goNext() { if (canNext && step < TOTAL_STEPS - 1) setStep(step + 1); }
+  function goBack() { if (step > 0) setStep(step - 1); }
+
   return (
     <div className="max-w-5xl mx-auto py-6 px-4">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-white">Create Video</h1>
-        <p className="text-gray-500 text-sm mt-0.5">AI generates everything — you just pick the vibe</p>
+      {/* Progress bars at top */}
+      <div className="flex gap-1.5 mb-6">
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+          <div key={i} className={`h-1.5 rounded-full flex-1 transition-all ${
+            i <= step ? "bg-indigo-500" : "bg-gray-800"
+          }`} />
+        ))}
       </div>
 
-      {/* Step indicator */}
-      <div className="flex items-center gap-1 mb-6">
-        {STEPS.map((s, i) => (
-          <button key={s} onClick={() => i <= step && setStep(i)} className="flex items-center gap-1">
-            <div className={`h-1 rounded-sm transition-all ${
-              i <= step ? "bg-indigo-500 w-12" : "bg-gray-800 w-8"
-            }`} />
-          </button>
-        ))}
-        <span className="ml-2 text-xs text-gray-500">{STEPS[step]}</span>
+      {/* Step header */}
+      <div className="flex items-center gap-3 mb-1">
+        <h1 className="text-xl font-bold text-white">{STEP_TITLES[step]}</h1>
+        <span className="text-xs font-medium text-indigo-400 bg-indigo-950 border border-indigo-800 px-2 py-0.5 rounded-full">
+          Step {step + 1} of {TOTAL_STEPS}
+        </span>
       </div>
 
       {error && (
-        <div className="mb-4 px-4 py-2.5 rounded-md bg-red-950/60 border border-red-900 text-red-300 text-sm">{error}</div>
+        <div className="mt-4 px-4 py-2.5 rounded-md bg-red-950/60 border border-red-900 text-red-300 text-sm">{error}</div>
       )}
 
-      <div className="flex gap-6">
-        {/* Left: Controls */}
+      <div className="flex gap-8 mt-5">
+        {/* ── Left: Step content ───────────────────────────────────────── */}
         <div className="flex-1 min-w-0">
 
-          {/* ── Step 0: Topic ─────────────────────────────────────────── */}
+          {/* Step 0: Topic */}
           {step === 0 && (
             <div className="space-y-5">
-              {/* Script type */}
               <div>
-                <label className="text-xs text-gray-500 mb-2 block font-medium">Script format</label>
+                <label className="text-xs text-gray-400 mb-2 block">Script format</label>
                 <div className="flex flex-wrap gap-1.5">
                   {SCRIPT_TYPES.map((st) => (
                     <button key={st.id} onClick={() => setScriptType(st.id)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all border ${
                         scriptType === st.id
-                          ? "bg-indigo-600 text-white"
-                          : "bg-gray-900 text-gray-400 hover:bg-gray-800 hover:text-gray-300"
+                          ? "bg-indigo-600 border-indigo-600 text-white"
+                          : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
                       }`}
                     >{st.icon} {st.label}</button>
                   ))}
                 </div>
               </div>
 
-              {/* Category quick picks */}
               <div>
-                <label className="text-xs text-gray-500 mb-2 block font-medium">Category</label>
+                <label className="text-xs text-gray-400 mb-2 block">Category</label>
                 <div className="flex flex-wrap gap-1.5">
                   {CATEGORIES.map((cat) => (
                     <button key={cat.id} onClick={() => handleCategoryClick(cat.id)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all border ${
                         category === cat.id
-                          ? "bg-gray-700 text-white"
-                          : "bg-gray-900 text-gray-400 hover:bg-gray-800"
+                          ? "bg-gray-700 border-gray-600 text-white"
+                          : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600"
                       }`}
                     >{cat.icon} {cat.label}</button>
                   ))}
                 </div>
               </div>
 
-              {/* Topic suggestions */}
               {selectedCat && selectedCat.topics.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {selectedCat.topics.map((t) => (
                     <button key={t} onClick={() => setTopic(t)}
-                      className={`text-xs px-2.5 py-1 rounded-md transition-all ${
-                        topic === t ? "bg-indigo-600/40 text-indigo-300 border border-indigo-600" : "bg-gray-800/50 text-gray-500 hover:text-gray-300 border border-transparent"
+                      className={`text-xs px-3 py-1.5 rounded-md transition-all border ${
+                        topic === t ? "bg-indigo-600/30 text-indigo-300 border-indigo-600" : "bg-transparent border-gray-700 text-gray-500 hover:text-gray-300"
                       }`}
                     >{t}</button>
                   ))}
                 </div>
               )}
 
-              {/* Topic input */}
               <div>
-                <label className="text-xs text-gray-500 mb-2 block font-medium">Your topic or prompt</label>
-                <textarea
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
+                <label className="text-xs text-gray-400 mb-2 block">Your topic or prompt</label>
+                <textarea value={topic} onChange={(e) => setTopic(e.target.value)}
                   placeholder="e.g. 5 terrifying facts about the deep ocean..."
                   rows={3}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-md px-3.5 py-2.5 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-indigo-600 transition-colors resize-none"
+                  className="w-full bg-gray-900/50 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none"
                 />
               </div>
 
-              {/* Duration */}
               <div>
-                <label className="text-xs text-gray-500 mb-2 block font-medium">Duration</label>
-                <div className="flex gap-1.5">
+                <label className="text-xs text-gray-400 mb-2 block">Duration</label>
+                <div className="flex gap-2">
                   {DURATIONS.map((d) => (
                     <button key={d.value} onClick={() => setDuration(d.value)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex-1 ${
+                      className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all border ${
                         duration === d.value
-                          ? "bg-indigo-600 text-white"
-                          : "bg-gray-900 text-gray-400 hover:bg-gray-800"
+                          ? "bg-indigo-600 border-indigo-600 text-white"
+                          : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600"
                       }`}
                     >{d.label}</button>
                   ))}
@@ -264,127 +256,137 @@ export default function FacelessPage() {
             </div>
           )}
 
-          {/* ── Step 1: Style ─────────────────────────────────────────── */}
+          {/* Step 1: Art Style */}
           {step === 1 && (
             <div>
-              <label className="text-xs text-gray-500 mb-3 block font-medium">Choose the visual style for your video</label>
-              <div className="overflow-x-auto pb-2 -mx-1">
-                <div className="flex gap-3 px-1" style={{ minWidth: "max-content" }}>
-                  {STYLES.map((s) => (
-                    <button key={s.id} onClick={() => setStyle(s.id)}
-                      className="flex flex-col items-center gap-2 shrink-0"
-                      style={{ width: 140 }}
-                    >
-                      <div className={`relative w-full overflow-hidden rounded-lg border-2 transition-all ${
-                        style === s.id ? "border-indigo-500" : "border-gray-800 hover:border-gray-700"
-                      }`}>
-                        <div className="aspect-[3/4] overflow-hidden">
-                          <img src={s.image} alt={s.label} className="w-full h-full object-cover" />
-                        </div>
-                        {style === s.id && (
-                          <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center shadow-lg">
-                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
+              <p className="text-sm text-gray-400 mb-4">Choose the visual style for your video</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {STYLES.map((s) => (
+                  <button key={s.id} onClick={() => setStyle(s.id)} className="text-left">
+                    <div className={`relative overflow-hidden rounded-lg border-2 transition-all ${
+                      style === s.id ? "border-indigo-500" : "border-gray-800 hover:border-gray-700"
+                    }`}>
+                      <div className="aspect-[3/4]">
+                        <img src={s.image} alt={s.label} className="w-full h-full object-cover" />
                       </div>
-                      <span className={`text-xs font-medium ${style === s.id ? "text-white" : "text-gray-400"}`}>{s.label}</span>
-                    </button>
-                  ))}
-                </div>
+                      {style === s.id && (
+                        <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center">
+                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <p className={`text-xs font-medium mt-1.5 ${style === s.id ? "text-white" : "text-gray-400"}`}>{s.label}</p>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* ── Step 2: Voice & Audio ─────────────────────────────────── */}
+          {/* Step 2: Voice */}
           {step === 2 && (
-            <div className="space-y-5">
-              {/* Voice */}
-              <div>
-                <label className="text-xs text-gray-500 mb-2 block font-medium">Narrator voice</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {VOICES.map((v) => (
-                    <button key={v.id} onClick={() => setVoice(v.id)}
-                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-md border text-left transition-all ${
-                        voice === v.id ? "border-indigo-500 bg-indigo-950/30" : "border-gray-800 bg-gray-900 hover:border-gray-700"
-                      }`}
-                    >
-                      <button
-                        onClick={(e) => { e.stopPropagation(); playAudio(`v-${v.id}`, v.file); }}
-                        className="w-7 h-7 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center shrink-0"
-                      >
-                        {playingAudio === `v-${v.id}` ? (
-                          <svg className="w-3 h-3 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-                        ) : (
-                          <svg className="w-3 h-3 text-gray-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        )}
-                      </button>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-white">{v.label}</p>
-                        <p className="text-[10px] text-gray-500 truncate">{v.desc}</p>
+            <div>
+              <p className="text-sm text-gray-400 mb-4">Pick the narrator voice</p>
+              <div className="space-y-2">
+                {VOICES.map((v) => (
+                  <button key={v.id} onClick={() => setVoice(v.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                      voice === v.id ? "border-indigo-500 bg-indigo-950/20" : "border-gray-800 hover:border-gray-700"
+                    }`}
+                  >
+                    {voice === v.id ? (
+                      <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
                       </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Music */}
-              <div>
-                <label className="text-xs text-gray-500 mb-2 block font-medium">Background music</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {MUSIC_TRACKS.map((m) => (
-                    <button key={m.id} onClick={() => setMusic(m.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                        music === m.id
-                          ? "bg-indigo-600 text-white"
-                          : "bg-gray-900 text-gray-400 hover:bg-gray-800"
-                      }`}
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-700 shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{v.label}</p>
+                      <p className="text-xs text-gray-500">{v.desc}</p>
+                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); playAudio(`v-${v.id}`, v.file); }}
+                      className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center shrink-0 transition-colors"
                     >
-                      <span className={`w-2 h-2 rounded-full ${m.color}`} />
-                      {m.label}
-                      {m.file && (
-                        <span onClick={(e) => { e.stopPropagation(); playAudio(`m-${m.id}`, m.file!); }}
-                          className="ml-0.5 opacity-60 hover:opacity-100"
-                        >{playingAudio === `m-${m.id}` ? "||" : "▶"}</span>
+                      {playingAudio === `v-${v.id}` ? (
+                        <svg className="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                       )}
                     </button>
-                  ))}
-                </div>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* ── Step 3: Publish ───────────────────────────────────────── */}
+          {/* Step 3: Music */}
           {step === 3 && (
+            <div>
+              <p className="text-sm text-gray-400 mb-4">Choose background music for your video</p>
+              <div className="space-y-2">
+                {MUSIC_TRACKS.map((m) => (
+                  <button key={m.id} onClick={() => setMusic(m.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                      music === m.id ? "border-indigo-500 bg-indigo-950/20" : "border-gray-800 hover:border-gray-700"
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-lg ${m.color} shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{m.label}</p>
+                      <p className="text-xs text-gray-500 truncate">{m.desc}</p>
+                    </div>
+                    {m.file && (
+                      <button onClick={(e) => { e.stopPropagation(); playAudio(`m-${m.id}`, m.file!); }}
+                        className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center shrink-0 transition-colors"
+                      >
+                        {playingAudio === `m-${m.id}` ? (
+                          <svg className="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        )}
+                      </button>
+                    )}
+                    {music === m.id && (
+                      <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Generate */}
+          {step === 4 && (
             <div className="space-y-4">
-              {/* Summary */}
-              <div className="bg-gray-900 border border-gray-800 rounded-md p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Topic</span>
-                  <span className="text-white truncate ml-4 max-w-[70%] text-right">{topic}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Format</span>
-                  <span className="text-white">{SCRIPT_TYPES.find(s => s.id === scriptType)?.label}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Style</span>
-                  <span className="text-white">{selectedStyle?.label}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Voice</span>
-                  <span className="text-white">{VOICES.find(v => v.id === voice)?.label}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Duration</span>
-                  <span className="text-white">{duration}s</span>
-                </div>
+              <p className="text-sm text-gray-400 mb-2">Review your settings and generate</p>
+
+              <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 space-y-3">
+                {[
+                  ["Topic", topic],
+                  ["Format", SCRIPT_TYPES.find(s => s.id === scriptType)?.label],
+                  ["Style", selectedStyle?.label],
+                  ["Voice", VOICES.find(v => v.id === voice)?.label],
+                  ["Music", MUSIC_TRACKS.find(m => m.id === music)?.label],
+                  ["Duration", `${duration}s`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between text-sm">
+                    <span className="text-gray-500">{label}</span>
+                    <span className="text-white truncate ml-4 max-w-[60%] text-right">{value}</span>
+                  </div>
+                ))}
               </div>
 
               {/* Auto-post */}
               {(ytChannels.length > 0 || igChannels.length > 0) && (
-                <div className="bg-gray-900 border border-gray-800 rounded-md p-4">
+                <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-white">Auto-post when ready</p>
@@ -435,9 +437,8 @@ export default function FacelessPage() {
                 </div>
               )}
 
-              {/* Generate button */}
               <button onClick={handleSubmit} disabled={submitting || !topic.trim()}
-                className={`w-full py-3.5 rounded-md text-sm font-semibold transition-all ${
+                className={`w-full py-3.5 rounded-lg text-sm font-semibold transition-all ${
                   submitting || !topic.trim()
                     ? "bg-gray-800 text-gray-500 cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-500 text-white"
@@ -457,71 +458,66 @@ export default function FacelessPage() {
             </div>
           )}
 
-          {/* Navigation */}
-          {step < 3 && (
-            <div className="flex gap-3 mt-6">
-              {step > 0 && (
-                <button onClick={() => setStep(step - 1)}
-                  className="px-5 py-2.5 rounded-md text-sm font-medium bg-gray-900 text-gray-400 hover:bg-gray-800 transition-colors"
-                >Back</button>
-              )}
-              <button onClick={() => canNext && setStep(step + 1)} disabled={!canNext}
-                className={`flex-1 py-2.5 rounded-md text-sm font-semibold transition-all ${
+          {/* Navigation — always visible except on last step */}
+          {step < 4 && (
+            <div className="flex items-center justify-between mt-8">
+              {step > 0 ? (
+                <button onClick={goBack}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-700 text-gray-300 hover:border-gray-600 hover:text-white transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                  Back
+                </button>
+              ) : <div />}
+              <button onClick={goNext} disabled={!canNext}
+                className={`flex items-center gap-1.5 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   canNext ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-gray-800 text-gray-500 cursor-not-allowed"
                 }`}
-              >Continue</button>
+              >
+                Continue
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </button>
             </div>
           )}
         </div>
 
-        {/* Right: Phone preview */}
-        <div className="hidden lg:block w-64 shrink-0">
+        {/* ── Right: Phone preview ──────────────────────────────────── */}
+        <div className="hidden lg:block w-56 shrink-0">
           <div className="sticky top-24">
-            <div className="bg-gray-950 border border-gray-800 rounded-[20px] p-2 shadow-2xl">
-              {/* Phone notch */}
+            <div className="bg-gray-950 border border-gray-800 rounded-[20px] p-1.5 shadow-2xl">
               <div className="flex justify-center mb-1">
-                <div className="w-20 h-1 rounded-full bg-gray-800" />
+                <div className="w-16 h-1 rounded-full bg-gray-800" />
               </div>
-              {/* Screen */}
-              <div className="relative bg-black rounded-[14px] overflow-hidden aspect-[9/16]">
+              <div className="relative bg-black rounded-[16px] overflow-hidden aspect-[9/16]">
                 {selectedStyle && (
                   <img src={selectedStyle.image} alt="" className="w-full h-full object-cover" />
                 )}
-                {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                {/* Title */}
-                <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                <div className="absolute top-3 left-3 flex items-center gap-1">
                   <div className="w-0.5 h-3 rounded-full bg-yellow-400" />
-                  <span className="text-[8px] text-white/80 font-medium uppercase tracking-wider">
-                    {topic ? topic.slice(0, 25) : "Your video"}
+                  <span className="text-[7px] text-white/70 font-medium uppercase tracking-wider">
+                    {topic ? topic.slice(0, 20) : "Your video"}
                   </span>
                 </div>
-                {/* Subtitle preview */}
-                <div className="absolute bottom-6 inset-x-0 text-center px-3">
-                  <p className="text-[10px] text-white font-bold leading-tight drop-shadow-lg">
-                    {topic ? topic.split(" ").slice(0, 4).join(" ") : "Your subtitle text"}
+                <div className="absolute bottom-5 inset-x-0 text-center px-2">
+                  <p className="text-[9px] text-white font-bold leading-tight drop-shadow-lg">
+                    {topic ? topic.split(" ").slice(0, 4).join(" ") : "Subtitle text"}
                   </p>
-                  <p className="text-[10px] text-white font-bold leading-tight drop-shadow-lg">
+                  <p className="text-[9px] text-white font-bold leading-tight drop-shadow-lg">
                     {topic ? topic.split(" ").slice(4, 8).join(" ") : "appears here"}
                   </p>
                 </div>
-                {/* Progress dots */}
-                <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1">
+                <div className="absolute bottom-1.5 inset-x-0 flex justify-center gap-0.5">
                   {[0, 1, 2, 3, 4].map((i) => (
-                    <div key={i} className={`rounded-full ${i === 0 ? "w-3 h-1 bg-yellow-400" : "w-1 h-1 bg-white/30"}`} />
+                    <div key={i} className={`rounded-full ${i === 0 ? "w-2.5 h-0.5 bg-yellow-400" : "w-0.5 h-0.5 bg-white/30"}`} />
                   ))}
                 </div>
               </div>
-              {/* Phone bottom bar */}
-              <div className="flex justify-center mt-1.5 mb-0.5">
-                <div className="w-16 h-1 rounded-full bg-gray-800" />
+              <div className="flex justify-center mt-1">
+                <div className="w-12 h-0.5 rounded-full bg-gray-800" />
               </div>
             </div>
-            {/* Labels */}
-            <div className="mt-3 text-center">
-              <p className="text-[10px] text-gray-600">Preview</p>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">{selectedStyle?.label} style</p>
-            </div>
+            <p className="text-center text-[10px] text-gray-600 mt-2">Preview</p>
           </div>
         </div>
       </div>
