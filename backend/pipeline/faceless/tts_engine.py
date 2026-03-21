@@ -25,10 +25,10 @@ VOICES = {
     "dread":      ("en-US-RogerNeural", "-10%", "-3Hz"),     # Ominous deep voice
     "crypt":      ("en-US-ChristopherNeural", "-12%", "-5Hz"),  # Cold formal horror
 
-    # ── Hindi ────────────────────────────────────────────────
-    "madhur":     ("hi-IN-MadhurNeural", "-3%", "+0Hz"),     # Hindi male
-    "swara":      ("hi-IN-SwaraNeural", "-3%", "+0Hz"),      # Hindi female (best quality)
-    "bhoot":      ("hi-IN-MadhurNeural", "-10%", "-3Hz"),    # Hindi horror (subtle, not robotic)
+    # ── Hindi (no rate/pitch modification — sounds most natural) ──
+    "madhur":     ("hi-IN-MadhurNeural", "+0%", "+0Hz"),     # Hindi male
+    "swara":      ("hi-IN-SwaraNeural", "+0%", "+0Hz"),      # Hindi female (best quality)
+    "bhoot":      ("hi-IN-MadhurNeural", "+0%", "+0Hz"),     # Hindi horror (natural voice, horror via script/music)
 
     # ── Indian English ───────────────────────────────────────
     "prabhat":    ("en-IN-PrabhatNeural", "-3%", "+0Hz"),    # Indian English male
