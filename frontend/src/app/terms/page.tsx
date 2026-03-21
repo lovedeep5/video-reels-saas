@@ -2,7 +2,14 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Terms of Service — VidToReels",
-  description: "Terms of Service for VidToReels by Flaircross Consultancy.",
+  description:
+    "Terms of Service for VidToReels by Flaircross Consultancy. Covers account usage, content policies, payments, and third-party integrations.",
+  openGraph: {
+    title: "Terms of Service — VidToReels",
+    description: "Terms of Service for VidToReels by Flaircross Consultancy.",
+    url: "https://vidtoreels.com/terms",
+  },
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {

@@ -21,7 +21,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What visual styles are available?",
-    a: "We offer 6 AI visual styles: Studio Ghibli (anime, warm), Modern Anime (vibrant), Cartoon (Pixar-inspired), Comic Book (bold ink), Cinematic (photorealistic), and Watercolor (artistic, dreamy). Each produces unique, high-quality images for your video.",
+    a: "We offer 12 AI visual styles: Comic, Creepy Comic, Modern Cartoon, Disney, Ghibli, Anime, Painting, Dark Fantasy, Lego, Polaroid, Realism, and Fantastic. Each produces unique, high-quality images tailored to your video's mood and genre.",
   },
   {
     q: "How long can videos be?",
@@ -89,12 +89,7 @@ function OrgSchema() {
         { "@type": "Offer", price: "3999", priceCurrency: "INR", name: "Business" },
       ],
       description: "AI-powered platform to create faceless videos and auto-post to YouTube & Instagram.",
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: "4.8",
-        ratingCount: "150",
-        bestRating: "5",
-      },
+      /* aggregateRating omitted — will add when real reviews exist */
     },
   ];
   return (

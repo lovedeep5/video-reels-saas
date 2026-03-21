@@ -2,7 +2,14 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Privacy Policy — VidToReels",
-  description: "Privacy Policy for VidToReels and the VidToReels Cookie Sync Chrome extension.",
+  description:
+    "Privacy Policy for VidToReels by Flaircross Consultancy. How we collect, use, and protect your data.",
+  openGraph: {
+    title: "Privacy Policy — VidToReels",
+    description: "Privacy Policy for VidToReels by Flaircross Consultancy.",
+    url: "https://vidtoreels.com/privacy",
+  },
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

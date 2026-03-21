@@ -51,7 +51,8 @@ export const metadata: Metadata = {
     images: ["https://vidtoreels.com/images/og-cover.jpg"],
   },
   robots: { index: true, follow: true },
-  alternates: { canonical: "https://vidtoreels.com" },
+  metadataBase: new URL("https://vidtoreels.com"),
+  alternates: { canonical: "/" },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
   },
