@@ -24,18 +24,35 @@ MAX_LINES = 2
 WORDS_PER_CHUNK = MAX_WORDS_PER_LINE * MAX_LINES  # 8 words shown at a time
 
 
-def _get_font(size: int):
-    """Get a bold font — tries common paths on Linux (EC2) and Windows."""
-    font_paths = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/ubuntu/Ubuntu-Bold.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-    ]
-    for path in font_paths:
+def _has_devanagari(text: str) -> bool:
+    """Check if text contains Devanagari (Hindi) characters."""
+    return any("\u0900" <= ch <= "\u097F" for ch in text)
+
+
+# Bundled Devanagari font path (same directory as this file)
+_DEVANAGARI_FONT = os.path.join(os.path.dirname(__file__), "NotoSansDevanagari-Bold.ttf")
+
+# Latin font search paths
+_LATIN_FONT_PATHS = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/ubuntu/Ubuntu-Bold.ttf",
+    "C:/Windows/Fonts/arialbd.ttf",
+    "C:/Windows/Fonts/arial.ttf",
+]
+
+
+def _get_font(size: int, text: str = ""):
+    """Get font — uses Devanagari font for Hindi, Latin font otherwise."""
+    if text and _has_devanagari(text):
+        if os.path.exists(_DEVANAGARI_FONT):
+            return ImageFont.truetype(_DEVANAGARI_FONT, size)
+    for path in _LATIN_FONT_PATHS:
         if os.path.exists(path):
             return ImageFont.truetype(path, size)
+    # Fallback: try Devanagari font for any text (it supports Latin too)
+    if os.path.exists(_DEVANAGARI_FONT):
+        return ImageFont.truetype(_DEVANAGARI_FONT, size)
     return ImageFont.load_default(size)
 
 
@@ -69,7 +86,7 @@ def _create_subtitle_frame(
 
     # Title at top-left with accent bar
     if title:
-        title_font = _get_font(28)
+        title_font = _get_font(28, title)
         draw.rounded_rectangle(
             [(40, 65), (44, 95)], radius=2, fill=(255, 200, 60, 255)
         )
@@ -79,7 +96,8 @@ def _create_subtitle_frame(
         )
 
     # Subtitle text — 2 lines at bottom
-    sub_font = _get_font(52)
+    sample_text = line1 + line2
+    sub_font = _get_font(52, sample_text)
     line_height = 68
     base_y = HEIGHT - 240
 
