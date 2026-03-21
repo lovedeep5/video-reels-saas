@@ -6,24 +6,33 @@ import edge_tts
 
 # Voice definitions: name → (edge_tts_id, rate_adjustment, pitch_adjustment)
 VOICES = {
-    # ── English ──────────────────────────────────────────
-    "jack":    ("en-US-GuyNeural", "-5%", "+0Hz"),
-    "emma":    ("en-US-EmmaMultilingualNeural", "-3%", "+0Hz"),
-    "andrew":  ("en-US-AndrewMultilingualNeural", "-3%", "+0Hz"),
-    "aria":    ("en-US-AriaNeural", "-2%", "+0Hz"),
-    "ryan":    ("en-GB-RyanNeural", "-4%", "+0Hz"),
-    "sonia":   ("en-GB-SoniaNeural", "-3%", "+0Hz"),
-    # ── English Horror (deep pitch + slow rate) ──────────
-    "phantom": ("en-US-GuyNeural", "-25%", "-10Hz"),
-    "whisper": ("en-US-AriaNeural", "-15%", "-5Hz"),
-    "shadow":  ("en-GB-RyanNeural", "-30%", "-15Hz"),
-    # ── Hindi ────────────────────────────────────────────
-    "madhur":  ("hi-IN-MadhurNeural", "-3%", "+0Hz"),
-    "swara":   ("hi-IN-SwaraNeural", "-3%", "+0Hz"),
-    "bhoot":   ("hi-IN-MadhurNeural", "-25%", "-10Hz"),
-    # ── Indian English ───────────────────────────────────
-    "prabhat": ("en-IN-PrabhatNeural", "-3%", "+0Hz"),
-    "neerja":  ("en-IN-NeerjaNeural", "-3%", "+0Hz"),
+    # ── English (Natural) ──────────────────────────────────
+    "jack":       ("en-US-GuyNeural", "-5%", "+0Hz"),        # Deep male narrator
+    "emma":       ("en-US-EmmaMultilingualNeural", "-3%", "+0Hz"),  # Warm female
+    "andrew":     ("en-US-AndrewMultilingualNeural", "-3%", "+0Hz"),  # Natural male
+    "aria":       ("en-US-AriaNeural", "-2%", "+0Hz"),       # Expressive female
+    "ryan":       ("en-GB-RyanNeural", "-4%", "+0Hz"),       # British male
+    "sonia":      ("en-GB-SoniaNeural", "-3%", "+0Hz"),      # British female
+    "brian":      ("en-US-BrianNeural", "-3%", "+0Hz"),      # Clear male narrator
+    "ava":        ("en-US-AvaNeural", "-2%", "+0Hz"),        # Natural female (newest)
+    "christopher":("en-US-ChristopherNeural", "-4%", "+0Hz"),# Formal male
+    "roger":      ("en-US-RogerNeural", "-5%", "+0Hz"),      # Deep authoritative male
+
+    # ── English Horror (subtle — creepy, not robotic) ──────
+    "phantom":    ("en-US-GuyNeural", "-12%", "-4Hz"),       # Deeper, measured pace
+    "whisper":    ("en-US-AriaNeural", "-8%", "-2Hz"),       # Slightly eerie female
+    "shadow":     ("en-GB-RyanNeural", "-15%", "-6Hz"),      # Dark British narrator
+    "dread":      ("en-US-RogerNeural", "-10%", "-3Hz"),     # Ominous deep voice
+    "crypt":      ("en-US-ChristopherNeural", "-12%", "-5Hz"),  # Cold formal horror
+
+    # ── Hindi ────────────────────────────────────────────────
+    "madhur":     ("hi-IN-MadhurNeural", "-3%", "+0Hz"),     # Hindi male
+    "swara":      ("hi-IN-SwaraNeural", "-3%", "+0Hz"),      # Hindi female (best quality)
+    "bhoot":      ("hi-IN-MadhurNeural", "-10%", "-3Hz"),    # Hindi horror (subtle, not robotic)
+
+    # ── Indian English ───────────────────────────────────────
+    "prabhat":    ("en-IN-PrabhatNeural", "-3%", "+0Hz"),    # Indian English male
+    "neerja":     ("en-IN-NeerjaNeural", "-3%", "+0Hz"),     # Indian English female
 }
 
 # Which voices produce Hindi output (script gen writes in Hindi for these)

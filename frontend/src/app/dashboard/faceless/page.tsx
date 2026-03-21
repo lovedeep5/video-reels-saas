@@ -46,21 +46,27 @@ const LANGUAGES = [
 ];
 
 const ALL_VOICES = [
-  // English
+  // English — Natural
   { id: "jack", label: "Jack", desc: "Male · Deep narrator", lang: "en", bestFor: "Story, Facts, Explainer", file: "/voices/jack.mp3" },
-  { id: "emma", label: "Emma", desc: "Female · Warm", lang: "en", bestFor: "Story, Kids, Motivation", file: "/voices/emma.mp3" },
-  { id: "andrew", label: "Andrew", desc: "Male · Natural", lang: "en", bestFor: "Facts, Explainer", file: "/voices/andrew.mp3" },
-  { id: "aria", label: "Aria", desc: "Female · Expressive", lang: "en", bestFor: "Kids, Motivation", file: "/voices/aria.mp3" },
-  { id: "ryan", label: "Ryan", desc: "Male · British", lang: "en", bestFor: "Story, Explainer", file: "/voices/ryan.mp3" },
-  { id: "sonia", label: "Sonia", desc: "Female · British", lang: "en", bestFor: "Story, Motivation", file: "/voices/sonia.mp3" },
-  // English Horror
-  { id: "phantom", label: "Phantom", desc: "Male · Deep horror narrator", lang: "en", bestFor: "Horror", file: "/voices/phantom.mp3" },
-  { id: "whisper", label: "Whisper", desc: "Female · Eerie and slow", lang: "en", bestFor: "Horror", file: "/voices/whisper.mp3" },
-  { id: "shadow", label: "Shadow", desc: "Male · Very deep, chilling", lang: "en", bestFor: "Horror", file: "/voices/shadow.mp3" },
+  { id: "emma", label: "Emma", desc: "Female · Warm storyteller", lang: "en", bestFor: "Story, Kids, Motivation", file: "/voices/emma.mp3" },
+  { id: "andrew", label: "Andrew", desc: "Male · Natural, clear", lang: "en", bestFor: "Facts, Explainer", file: "/voices/andrew.mp3" },
+  { id: "aria", label: "Aria", desc: "Female · Expressive", lang: "en", bestFor: "Kids, Motivation, Story", file: "/voices/aria.mp3" },
+  { id: "ryan", label: "Ryan", desc: "Male · British dramatic", lang: "en", bestFor: "Story, Explainer", file: "/voices/ryan.mp3" },
+  { id: "sonia", label: "Sonia", desc: "Female · British elegant", lang: "en", bestFor: "Story, Motivation", file: "/voices/sonia.mp3" },
+  { id: "brian", label: "Brian", desc: "Male · Clear narrator", lang: "en", bestFor: "Facts, Explainer, Listicle", file: "/voices/brian.mp3" },
+  { id: "ava", label: "Ava", desc: "Female · Natural, smooth", lang: "en", bestFor: "Story, Motivation", file: "/voices/ava.mp3" },
+  { id: "christopher", label: "Christopher", desc: "Male · Formal, authoritative", lang: "en", bestFor: "Explainer, Facts", file: "/voices/christopher.mp3" },
+  { id: "roger", label: "Roger", desc: "Male · Deep, commanding", lang: "en", bestFor: "Story, Motivation", file: "/voices/roger.mp3" },
+  // English — Horror/Creepy
+  { id: "phantom", label: "Phantom", desc: "Male · Dark measured narrator", lang: "en", bestFor: "Horror", file: "/voices/phantom.mp3" },
+  { id: "whisper", label: "Whisper", desc: "Female · Eerie, unsettling", lang: "en", bestFor: "Horror", file: "/voices/whisper.mp3" },
+  { id: "shadow", label: "Shadow", desc: "Male · Dark British narrator", lang: "en", bestFor: "Horror", file: "/voices/shadow.mp3" },
+  { id: "dread", label: "Dread", desc: "Male · Ominous deep voice", lang: "en", bestFor: "Horror", file: "/voices/dread.mp3" },
+  { id: "crypt", label: "Crypt", desc: "Male · Cold, unsettling", lang: "en", bestFor: "Horror", file: "/voices/crypt.mp3" },
   // Hindi
   { id: "madhur", label: "Madhur", desc: "Male · Hindi narrator", lang: "hi", bestFor: "Story, Facts, Motivation", file: "/voices/madhur.mp3" },
-  { id: "swara", label: "Swara", desc: "Female · Hindi", lang: "hi", bestFor: "Story, Kids, Motivation", file: "/voices/swara.mp3" },
-  { id: "bhoot", label: "Bhoot", desc: "Male · Hindi horror", lang: "hi", bestFor: "Horror", file: "/voices/bhoot.mp3" },
+  { id: "swara", label: "Swara", desc: "Female · Hindi (best quality)", lang: "hi", bestFor: "Story, Kids, Motivation", file: "/voices/swara.mp3" },
+  { id: "bhoot", label: "Bhoot", desc: "Male · Hindi dark narrator", lang: "hi", bestFor: "Horror", file: "/voices/bhoot.mp3" },
   // Indian English
   { id: "prabhat", label: "Prabhat", desc: "Male · Indian English", lang: "en-in", bestFor: "Story, Facts, Explainer", file: "/voices/prabhat.mp3" },
   { id: "neerja", label: "Neerja", desc: "Female · Indian English", lang: "en-in", bestFor: "Story, Kids, Motivation", file: "/voices/neerja.mp3" },
