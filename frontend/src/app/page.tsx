@@ -226,8 +226,8 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
             {[
               { value: "~2 min", label: "Average creation time" },
-              { value: "6", label: "AI visual styles" },
-              { value: "6", label: "Natural AI voices" },
+              { value: "12", label: "AI visual styles" },
+              { value: "20+", label: "Natural AI voices" },
               { value: "2", label: "Publishing platforms" },
             ].map(({ value, label }) => (
               <div key={label}>

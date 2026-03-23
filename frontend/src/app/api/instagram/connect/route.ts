@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { oauthStatesCol } from "@/lib/mongodb";
 
 const SCOPES = [
   "instagram_business_basic",
@@ -22,7 +24,11 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const state = user._id!.toHexString();
+  // Generate cryptographic random state for CSRF protection
+  const state = randomBytes(32).toString("hex");
+  const states = await oauthStatesCol();
+  await states.insertOne({ state, user_id: user._id!, created_at: new Date() });
+
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL!.trim()}/api/instagram/callback`;
 
   // Instagram Login flow (2025+) — uses api.instagram.com, NOT facebook.com

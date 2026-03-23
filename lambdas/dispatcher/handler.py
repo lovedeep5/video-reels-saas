@@ -319,7 +319,7 @@ def handler(event, context):
                 db = _get_db()
                 db.jobs.update_one(
                     {"_id": ObjectId(job_id)},
-                    {"$set": {"status": "failed", "error": f"Failed to start worker: {exc}"}},
+                    {"$set": {"status": "failed", "error_message": f"Failed to start worker: {exc}"}},
                 )
             except Exception:
                 pass

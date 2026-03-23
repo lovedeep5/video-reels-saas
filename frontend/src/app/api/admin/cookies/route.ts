@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-helpers";
+import { requireAdmin } from "@/lib/admin-auth";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const s3 = new S3Client({
@@ -13,8 +13,9 @@ const s3 = new S3Client({
 // S3 key is per-user — resolved after auth
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser(req);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const adminOrRes = await requireAdmin(req);
+  if (adminOrRes instanceof NextResponse) return adminOrRes;
+  const user = adminOrRes;
 
   let formData: FormData;
   try {
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
       youtube_cookies: youtubeCookies.length,
       google_cookies: googleCookies.length,
       file_size_kb: Math.round(file.size / 1024),
-      s3_key: `s3://${process.env.S3_BUCKET}/${s3Key}`,
+      uploaded: true,
     },
   });
 }

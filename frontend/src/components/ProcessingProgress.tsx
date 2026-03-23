@@ -8,12 +8,12 @@ interface Props {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: "Queued",
+  queued: "Queued",
+  starting: "Starting",
   downloading: "Downloading",
-  transcribing: "Transcribing",
-  processing: "Analyzing",
+  processing: "Processing",
   rendering: "Rendering",
-  done: "Complete",
+  completed: "Complete",
   failed: "Failed",
 };
 

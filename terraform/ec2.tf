@@ -64,7 +64,7 @@ resource "aws_launch_template" "worker" {
 
   metadata_options {
     http_endpoint               = "enabled"
-    http_tokens                 = "optional" # IMDSv1 needed for instance-id lookup in startup.sh
+    http_tokens                 = "required" # IMDSv2 enforced — userdata uses token-based metadata requests
     http_put_response_hop_limit = 1
   }
 

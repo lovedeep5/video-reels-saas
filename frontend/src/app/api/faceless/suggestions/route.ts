@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth-helpers";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODELS = ["google/gemini-2.5-flash-lite", "google/gemini-2.5-flash"];
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return NextResponse.json({ suggestions: [] });
 

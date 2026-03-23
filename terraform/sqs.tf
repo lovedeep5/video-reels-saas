@@ -33,6 +33,15 @@ resource "aws_sqs_queue_policy" "jobs" {
       Principal = { Service = "lambda.amazonaws.com" }
       Action    = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
       Resource  = aws_sqs_queue.jobs.arn
+      Condition = {
+        ArnEquals = {
+          "aws:SourceArn" = [
+            aws_iam_role.lambda_dispatcher.arn,
+            aws_iam_role.lambda_recovery.arn,
+            aws_iam_role.lambda_scheduler.arn,
+          ]
+        }
+      }
     }]
   })
 }

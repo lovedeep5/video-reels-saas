@@ -56,11 +56,19 @@ def _remove_overlaps(clips: list[dict], max_overlap_ratio: float = 0.25) -> list
 
 def _parse_llm_response(text: str, duration: float, n_clips: int) -> list[dict]:
     """Extract, validate, and deduplicate JSON clip list from Claude's response."""
-    json_match = re.search(r'\[.*\]', text, re.DOTALL)
+    # Try non-greedy first (handles trailing text), fall back to greedy
+    json_match = re.search(r'\[[\s\S]*?\]', text, re.DOTALL)
     if not json_match:
         raise ValueError("No JSON array found in response")
 
-    clips = json.loads(json_match.group())
+    try:
+        clips = json.loads(json_match.group())
+    except json.JSONDecodeError:
+        # Non-greedy matched too little — try greedy as fallback
+        greedy_match = re.search(r'\[.*\]', text, re.DOTALL)
+        if not greedy_match:
+            raise ValueError("No valid JSON array found in response")
+        clips = json.loads(greedy_match.group())
     validated = []
 
     for clip in clips:
@@ -277,12 +285,18 @@ Return ONLY a JSON object (no markdown, no extra text):
         text = data["choices"][0]["message"]["content"]
         print(f"[llm_scorer] metadata response clip {clip_index}: {text[:200]}")
 
-        # Extract JSON object from response
-        obj_match = re.search(r'\{.*\}', text, re.DOTALL)
+        # Extract JSON object from response — non-greedy first, greedy fallback
+        obj_match = re.search(r'\{[\s\S]*?\}', text, re.DOTALL)
         if not obj_match:
             raise ValueError("No JSON object in metadata response")
 
-        meta = json.loads(obj_match.group())
+        try:
+            meta = json.loads(obj_match.group())
+        except json.JSONDecodeError:
+            greedy_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if not greedy_match:
+                raise ValueError("No valid JSON object in metadata response")
+            meta = json.loads(greedy_match.group())
         return {
             "yt_title": str(meta.get("yt_title", "")).strip()[:100] or "",
             "yt_description": str(meta.get("yt_description", "")).strip()[:5000] or "",

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCodeForTokens, getChannelInfo } from "@/lib/youtube";
-import { usersCol, ObjectId, MAX_CHANNELS, getChannels } from "@/lib/mongodb";
+import { usersCol, oauthStatesCol, ObjectId, MAX_CHANNELS, getChannels } from "@/lib/mongodb";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
-  const state = searchParams.get("state"); // user ObjectId
+  const state = searchParams.get("state");
   const error = searchParams.get("error");
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
@@ -14,7 +14,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/dashboard/settings?youtube=denied`);
   }
 
-  if (!ObjectId.isValid(state)) {
+  // Validate and consume CSRF state token (one-time use)
+  const states = await oauthStatesCol();
+  const stateDoc = await states.findOneAndDelete({ state });
+  if (!stateDoc) {
+    console.error("[youtube/callback] Invalid or expired OAuth state");
     return NextResponse.redirect(`${appUrl}/dashboard/settings?youtube=error`);
   }
 
@@ -23,7 +27,7 @@ export async function GET(req: NextRequest) {
     const channelInfo = await getChannelInfo(tokens.access_token);
 
     const users = await usersCol();
-    const user = await users.findOne({ _id: new ObjectId(state) });
+    const user = await users.findOne({ _id: stateDoc.user_id });
     if (!user) {
       return NextResponse.redirect(`${appUrl}/dashboard/settings?youtube=error`);
     }

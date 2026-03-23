@@ -90,7 +90,7 @@ def handler(event, context):
                 {"_id": job["_id"]},
                 {"$set": {
                     "status":       "failed",
-                    "error":        f"Job failed after {max_retries} attempts. Please resubmit.",
+                    "error_message": f"Job failed after {max_retries} attempts. Please resubmit.",
                     "completed_at": datetime.now(timezone.utc),
                 }},
             )

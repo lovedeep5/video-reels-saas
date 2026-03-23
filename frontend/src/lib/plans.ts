@@ -12,8 +12,8 @@ export const PLANS = {
     features: [
       "2 videos/month",
       "Up to 30 seconds",
-      "6 AI visual styles",
-      "6 AI voices",
+      "12 AI visual styles",
+      "20+ AI voices",
       "Manual publishing only",
     ],
   },

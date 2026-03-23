@@ -10,9 +10,10 @@ terraform {
 
   # State stored in existing S3 bucket — never loses infra state
   backend "s3" {
-    bucket = "vidtoreel-bucket"
-    key    = "terraform/state.tfstate"
-    region = "ap-south-1"
+    bucket  = "vidtoreel-bucket"
+    key     = "terraform/state.tfstate"
+    region  = "ap-south-1"
+    encrypt = true
   }
 }
 

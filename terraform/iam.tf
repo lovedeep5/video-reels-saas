@@ -28,7 +28,7 @@ resource "aws_iam_policy" "lambda_dispatcher" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/vidtoreels/*"
       },
       # SQS — read, delete, snooze messages
       {
@@ -92,7 +92,7 @@ resource "aws_iam_policy" "lambda_recovery" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/vidtoreels/*"
       },
       {
         Effect   = "Allow"
@@ -148,7 +148,7 @@ resource "aws_iam_policy" "lambda_scheduler" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/vidtoreels/*"
       },
       # SSM — read secrets (MongoDB URI, YouTube client ID/secret)
       {
@@ -224,7 +224,7 @@ resource "aws_iam_policy" "ec2_worker" {
       {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/vidtoreels/*"
       },
     ]
   })

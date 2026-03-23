@@ -19,7 +19,12 @@ function computeExpiry(expiry: string, customDate?: string): Date | undefined {
   if (expiry === "month") return new Date(now.getTime() + 30 * 86400000);
   if (expiry === "3months") return new Date(now.getTime() + 90 * 86400000);
   if (expiry === "year") return new Date(now.getTime() + 365 * 86400000);
-  if (expiry === "custom" && customDate) return new Date(customDate);
+  if (expiry === "custom" && customDate) {
+    const d = new Date(customDate);
+    if (isNaN(d.getTime())) return undefined;
+    if (d.getTime() <= now.getTime()) return undefined;
+    return d;
+  }
   return undefined; // never
 }
 

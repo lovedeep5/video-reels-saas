@@ -305,6 +305,7 @@ export interface DbAutomationRun {
 }
 
 let _automationIndexesEnsured = false;
+let _automationRunIndexesEnsured = false;
 
 export async function automationsCol(): Promise<Collection<DbAutomation>> {
   const col = (await getDb()).collection<DbAutomation>("automations");
@@ -317,9 +318,31 @@ export async function automationsCol(): Promise<Collection<DbAutomation>> {
 
 export async function automationRunsCol(): Promise<Collection<DbAutomationRun>> {
   const col = (await getDb()).collection<DbAutomationRun>("automation_runs");
-  if (!_automationIndexesEnsured) {
+  if (!_automationRunIndexesEnsured) {
+    _automationRunIndexesEnsured = true;
     col.createIndex({ status: 1, scheduled_post_at: 1 }).catch(() => {});
     col.createIndex({ automation_id: 1, scheduled_post_at: -1 }).catch(() => {});
+  }
+  return col;
+}
+
+// ── OAuth State (CSRF protection) ───────────────────────────────────────────
+
+export interface DbOAuthState {
+  _id?: ObjectId;
+  state: string;
+  user_id: ObjectId;
+  created_at: Date;
+}
+
+let _oauthStateIndexesEnsured = false;
+
+export async function oauthStatesCol(): Promise<Collection<DbOAuthState>> {
+  const col = (await getDb()).collection<DbOAuthState>("oauth_states");
+  if (!_oauthStateIndexesEnsured) {
+    _oauthStateIndexesEnsured = true;
+    col.createIndex({ state: 1 }, { unique: true }).catch(() => {});
+    col.createIndex({ created_at: 1 }, { expireAfterSeconds: 600 }).catch(() => {}); // auto-delete after 10min
   }
   return col;
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { usersCol, ObjectId, MAX_CHANNELS, getChannels } from "@/lib/mongodb";
+import { usersCol, oauthStatesCol, ObjectId, MAX_CHANNELS, getChannels } from "@/lib/mongodb";
 import { exchangeCodeForLongLivedToken, getInstagramAccount } from "@/lib/instagram";
 
 export async function GET(req: NextRequest) {
@@ -15,7 +15,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/dashboard/settings?instagram=denied`);
   }
 
-  if (!ObjectId.isValid(state)) {
+  // Validate and consume CSRF state token (one-time use)
+  const states = await oauthStatesCol();
+  const stateDoc = await states.findOneAndDelete({ state });
+  if (!stateDoc) {
+    console.error("[instagram/callback] Invalid or expired OAuth state");
     return NextResponse.redirect(`${appUrl}/dashboard/settings?instagram=error`);
   }
 
@@ -24,7 +28,7 @@ export async function GET(req: NextRequest) {
     const account = await getInstagramAccount(longLivedToken);
 
     const users = await usersCol();
-    const user = await users.findOne({ _id: new ObjectId(state) });
+    const user = await users.findOne({ _id: stateDoc.user_id });
     if (!user) {
       return NextResponse.redirect(`${appUrl}/dashboard/settings?instagram=error`);
     }
