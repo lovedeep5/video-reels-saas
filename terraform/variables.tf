@@ -118,3 +118,10 @@ variable "razorpay_webhook_secret" {
   sensitive   = true
 }
 
+variable "serpapi_key" {
+  description = "SerpAPI key for web search in script generation"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+

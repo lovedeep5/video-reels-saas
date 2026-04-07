@@ -29,8 +29,9 @@ S3_BUCKET       = os.environ["S3_BUCKET"]
 AWS_REGION      = os.environ.get("AWS_REGION", "ap-south-1")
 JOB_ID          = os.environ["JOB_ID"]
 
-WHISPER_MODEL   = os.environ.get("WHISPER_MODEL", "tiny")
+WHISPER_MODEL      = os.environ.get("WHISPER_MODEL", "tiny")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+SERPAPI_KEY        = os.environ.get("SERPAPI_KEY", "")
 
 TEMP_DIR   = Path("/tmp/vidtoreels")
 OUTPUT_DIR = Path("/tmp/vidtoreels/output")
@@ -109,6 +110,7 @@ def run():
     os.environ["AWS_REGION"]            = AWS_REGION
     os.environ["S3_BUCKET"]             = S3_BUCKET
     os.environ["OPENROUTER_API_KEY"]    = OPENROUTER_API_KEY
+    os.environ["SERPAPI_KEY"]           = SERPAPI_KEY
 
     log(f"user={job.get('user_id')} plan={plan_key} source_type={job.get('source_type','url')} clips_requested={job.get('clips_requested')} url={(job.get('source_url') or '')[:80]}")
 

@@ -1,9 +1,14 @@
-"""Download YouTube/online videos using yt-dlp."""
+"""Download YouTube/online videos using yt-dlp.
+
+Strategy:
+  1. Try without cookies using multiple player clients (works for most public videos)
+  2. If auth error and cookies are available, retry with cookies
+  3. If no cookies and auth error, raise BotDetectionError with helpful message
+"""
 import os
 from pathlib import Path
 
 
-# Error messages that indicate YouTube is blocking the download
 BOT_DETECTION_PHRASES = [
     "sign in to confirm",
     "sign in to confirm you're not a bot",
@@ -17,6 +22,15 @@ BOT_DETECTION_PHRASES = [
     "this video requires payment",
 ]
 
+# Ordered from least to most aggressive — try each until one works
+PLAYER_CLIENT_STRATEGIES = [
+    ["web"],
+    ["ios"],
+    ["android"],
+    ["web", "ios"],
+    ["tv_embedded"],
+]
+
 
 class BotDetectionError(RuntimeError):
     """Raised when yt-dlp fails due to YouTube bot/auth blocking."""
@@ -28,7 +42,7 @@ def _is_bot_detection(error_msg: str) -> bool:
     return any(phrase in lower for phrase in BOT_DETECTION_PHRASES)
 
 
-def _ydl_opts(out_template: str, cookie_file: str | None) -> dict:
+def _ydl_opts(out_template: str, player_clients: list, cookie_file: str | None = None) -> dict:
     opts = {
         "format": "bestvideo[height<=1440][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1440]+bestaudio/bestvideo+bestaudio/best",
         "outtmpl": out_template,
@@ -37,8 +51,9 @@ def _ydl_opts(out_template: str, cookie_file: str | None) -> dict:
         "no_warnings": False,
         "noplaylist": True,
         "overwrites": True,
-        "extractor_args": {"youtube": {"player_client": ["web", "ios"]}},
+        "extractor_args": {"youtube": {"player_client": player_clients}},
         "js_runtimes": {"node": {}},
+        "socket_timeout": 30,
     }
     if cookie_file:
         opts["cookiefile"] = cookie_file
@@ -46,11 +61,41 @@ def _ydl_opts(out_template: str, cookie_file: str | None) -> dict:
 
 
 def _find_downloaded_file(output_dir: Path, job_id: str) -> str | None:
-    for ext in ("mp4", "mkv", "webm", "avi"):
+    for ext in ("mp4", "mkv", "webm", "avi", "mov"):
         candidate = output_dir / f"source_{job_id}.{ext}"
         if candidate.exists():
             return str(candidate)
     return None
+
+
+def _try_download(url: str, out_template: str, output_dir: Path, job_id: str, cookie_file: str | None) -> dict:
+    """Attempt download with multiple player clients. Raises BotDetectionError or RuntimeError."""
+    import yt_dlp
+
+    last_error = ""
+    for clients in PLAYER_CLIENT_STRATEGIES:
+        try:
+            print(f"[downloader] trying clients={clients} cookies={'yes' if cookie_file else 'no'}")
+            with yt_dlp.YoutubeDL(_ydl_opts(out_template, clients, cookie_file)) as ydl:
+                info = ydl.extract_info(url, download=True)
+
+            path = _find_downloaded_file(output_dir, job_id)
+            if not path:
+                raise RuntimeError("Downloaded file not found after yt-dlp completed")
+
+            return {
+                "path": path,
+                "title": info.get("title", "Untitled"),
+                "duration": float(info.get("duration") or 0),
+            }
+        except Exception as e:
+            last_error = str(e)
+            if _is_bot_detection(last_error):
+                # No point trying more clients if auth is the issue
+                raise BotDetectionError(last_error)
+            print(f"[downloader] clients={clients} failed: {last_error[:100]}")
+
+    raise RuntimeError(f"All player clients failed. Last error: {last_error[:300]}")
 
 
 def download_video(
@@ -60,49 +105,49 @@ def download_video(
     cookie_file: str | None = None,
 ) -> dict:
     """
-    Download video from URL. Returns dict with:
-      path: str — local file path
-      title: str — video title
-      duration: float — duration in seconds
+    Download video from URL.
 
-    Raises BotDetectionError if YouTube blocks the download (auth required).
-    Raises RuntimeError on other failures.
+    Strategy:
+      1. Try without cookies first (multiple player clients)
+      2. If auth error and cookies available → retry with cookies
+      3. If auth error and no cookies → raise BotDetectionError with clear message
 
-    cookie_file: path to a Netscape cookies file. If provided and valid, used
-      directly. If None, downloads without cookies (works for most public videos).
+    Returns dict: {path, title, duration}
+    Raises BotDetectionError | RuntimeError.
     """
     try:
-        import yt_dlp
+        import yt_dlp  # noqa: F401
     except ImportError:
         raise RuntimeError("yt-dlp not installed. Run: pip install yt-dlp")
 
     out_template = str(output_dir / f"source_{job_id}.%(ext)s")
 
     # Validate cookie file
-    resolved_cookie = None
+    valid_cookie = None
     if cookie_file and os.path.exists(cookie_file) and os.path.getsize(cookie_file) > 100:
-        resolved_cookie = cookie_file
+        valid_cookie = cookie_file
 
-    print(f"[downloader] job_id={job_id} cookies={'yes' if resolved_cookie else 'none'} url={url}")
+    print(f"[downloader] job={job_id} url={url[:80]} cookies_available={'yes' if valid_cookie else 'no'}")
 
+    # Attempt 1: without cookies (works for most public videos)
     try:
-        with yt_dlp.YoutubeDL(_ydl_opts(out_template, resolved_cookie)) as ydl:
-            info = ydl.extract_info(url, download=True)
-    except Exception as e:
-        msg = str(e)
-        if _is_bot_detection(msg):
-            raise BotDetectionError(msg)
-        raise RuntimeError(msg)
+        return _try_download(url, out_template, output_dir, job_id, cookie_file=None)
+    except BotDetectionError as e:
+        if not valid_cookie:
+            raise BotDetectionError(
+                "This video requires YouTube authentication. "
+                "Please upload your YouTube cookies in Settings → Advanced."
+            ) from e
+        print(f"[downloader] Cookie-free failed, retrying with cookies: {str(e)[:80]}")
 
-    path = _find_downloaded_file(output_dir, job_id)
-    if not path:
-        raise RuntimeError("Downloaded file not found after yt-dlp completed")
-
-    return {
-        "path": path,
-        "title": info.get("title", "Untitled"),
-        "duration": float(info.get("duration") or 0),
-    }
+    # Attempt 2: with cookies (for age-restricted / members-only / private videos)
+    try:
+        return _try_download(url, out_template, output_dir, job_id, cookie_file=valid_cookie)
+    except BotDetectionError as e:
+        raise BotDetectionError(
+            "YouTube is blocking this download even with cookies. "
+            "Try refreshing your cookies or check if the video is accessible."
+        ) from e
 
 
 def get_video_info(path: str) -> dict:

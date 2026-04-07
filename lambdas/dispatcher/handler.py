@@ -195,6 +195,7 @@ export MONGODB_URI=$(get_ssm MONGODB_URI)
 export MONGODB_DB_NAME=$(get_ssm MONGODB_DB_NAME)
 export S3_BUCKET=$(get_ssm S3_BUCKET)
 export OPENROUTER_API_KEY=$(get_ssm OPENROUTER_API_KEY)
+export SERPAPI_KEY=$(get_ssm SERPAPI_KEY)
 echo "[worker] secrets fetched ok"
 
 # ── 4. Install pymongo early (cleanup script needs it) ────────────────────────

@@ -134,6 +134,15 @@ resource "aws_ssm_parameter" "youtube_client_secret" {
   }
 }
 
+resource "aws_ssm_parameter" "serpapi_key" {
+  name        = "/vidtoreels/SERPAPI_KEY"
+  description = "SerpAPI key for web search in script generation"
+  type        = "SecureString"
+  value       = var.serpapi_key
+  tags        = local.common_tags
+  lifecycle { prevent_destroy = true }
+}
+
 resource "aws_ssm_parameter" "youtube_cookies" {
   name        = "/vidtoreels/YOUTUBE_COOKIES"
   description = "Netscape-format YouTube cookies for yt-dlp (upload manually via AWS console)"
