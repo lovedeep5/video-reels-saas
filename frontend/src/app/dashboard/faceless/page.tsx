@@ -460,7 +460,7 @@ export default function CreateVideoPage() {
                       <select value={autoYtChannel} onChange={(e) => setAutoYtChannel(e.target.value)}
                         className="bg-gray-900 border border-gray-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none"
                       >
-                        {ytChannels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {ytChannels.map((c) => <option key={c.id} value={c.id}>{c.account_name}</option>)}
                       </select>
                     )}
                   </div>
@@ -473,7 +473,7 @@ export default function CreateVideoPage() {
                       <select value={autoIgChannel} onChange={(e) => setAutoIgChannel(e.target.value)}
                         className="bg-gray-900 border border-gray-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none"
                       >
-                        {igChannels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {igChannels.map((c) => <option key={c.id} value={c.id}>{c.account_name}</option>)}
                       </select>
                     )}
                   </div>
