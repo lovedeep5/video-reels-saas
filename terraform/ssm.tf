@@ -138,9 +138,12 @@ resource "aws_ssm_parameter" "serpapi_key" {
   name        = "/vidtoreels/SERPAPI_KEY"
   description = "SerpAPI key for web search in script generation"
   type        = "SecureString"
-  value       = var.serpapi_key
+  value       = var.serpapi_key == "" ? "placeholder" : var.serpapi_key
   tags        = local.common_tags
-  lifecycle { prevent_destroy = true }
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [value]  # managed manually via AWS console / CLI; never overwrite
+  }
 }
 
 resource "aws_ssm_parameter" "youtube_cookies" {
