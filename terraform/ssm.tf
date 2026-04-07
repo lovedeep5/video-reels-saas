@@ -157,3 +157,4 @@ resource "aws_ssm_parameter" "youtube_cookies" {
     ignore_changes  = [value]  # never overwrite — admin updates this manually
   }
 }
+
