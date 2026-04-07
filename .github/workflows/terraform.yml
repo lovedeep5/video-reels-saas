@@ -96,6 +96,12 @@ jobs:
         working-directory: terraform
         run: terraform validate
 
+      # Import pre-existing resources that were created out-of-band (idempotent — || true if already in state)
+      - name: Import pre-existing SSM parameters
+        working-directory: terraform
+        run: |
+          terraform import aws_ssm_parameter.serpapi_key /vidtoreels/SERPAPI_KEY 2>&1 || true
+
       - name: Terraform Plan
         id: plan
         working-directory: terraform
